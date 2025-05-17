@@ -25,30 +25,38 @@ class NaiveNet(torch.nn.Module):
 
         # Convolution layers followed by 2x2->1x1 downsampling
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
+        self.norm1 = nn.BatchNorm2d(16) #16 chan
         self.activate_fn1 = torch.relu
         self.pool1 = nn.MaxPool2d(2, 2)
 
         # Second conv and pool, reduce to 8px*8px, 32 channels
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3)
+        self.norm2 = nn.BatchNorm2d(32) #32 chan
         self.activate_fn2 = torch.relu
         self.pool2 = nn.MaxPool2d(2, 2)
 
         # 8px * 8px * 32 chan -> 10 classes of objects
+        self.pre_fc_dropout = nn.Dropout(0.1)
         self.fc_classifier = nn.Linear(1568, 10)
 
     def forward(self, imgdata):
         # First convolution + rectification +  pool
         imgdata = self.conv1(imgdata)
+        imgdata = self.norm1(imgdata)
         imgdata = self.activate_fn1(imgdata)
         imgdata = self.pool1(imgdata)
 
         # second convolution + pool
         imgdata = self.conv2(imgdata)
+        imgdata = self.norm2(imgdata)
         imgdata = self.activate_fn2(imgdata)
         imgdata = self.pool2(imgdata)
 
         # Linearize ahead of fully connected layer
         imgdata = imgdata.view(imgdata.size(0), -1)
+
+        # Zero out some weights to reduce redundancy and avoid overfitting
+        self.pre_fc_dropout(imgdata)
 
         # FC layer to determine class of object in img
         clz = self.fc_classifier(imgdata)
@@ -146,6 +154,23 @@ def main():
                 epoch + 1, EPOCHS, loss_acc, scheduler.get_last_lr()[0]
             )
         )
+
+        # Print acc on an interval, it's expensive to do every epoch
+        if epoch %5 == 0 and False:
+            model.eval()
+            correct = 0
+            total = 0
+            with torch.no_grad():
+                for img, label in validation_loader:
+                    img, label = img.to(device), label.to(device)
+                    out = model(images)
+                    _, preds = torch.max(out, 1)
+                    correct += (preds == label).sum().item()
+                    total += lab.size(0)
+            acc = 100.0 * correct * total
+            print("Validation for epoch {}: {}", epoch+1, acc)
+
+
 
     # Check accuracy against data the model has not seen
     model.eval()
