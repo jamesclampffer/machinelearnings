@@ -1,3 +1,5 @@
+import time
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -6,17 +8,21 @@ import torchvision.transforms as transforms
 from torchvision.models import mobilenet_v2
 from torch.utils.data import DataLoader
 
+
 def main():
     torch.set_num_threads(8)
 
     # Runtime config
     BATCH_SIZE = 128
-    EPOCHS = 30
+    EPOCHS = 100
 
     # Transforms
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
+        transforms.ColorJitter(
+                0.1, 0.1, 0.1, 0.02
+            ),  # Fuzz colors and brightness
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465),
                              (0.2023, 0.1994, 0.2010))
@@ -29,14 +35,14 @@ def main():
     ])
 
     # Datasets
-    trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
-    testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_test)
+    trainset = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
+    testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
 
     trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
     testloader = DataLoader(testset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = mobilenet_v2(num_classes=10)
+    model = mobilenet_v2(num_classes=100)
     model.to(device)
 
     # Optimizer, Loss, Scheduler
