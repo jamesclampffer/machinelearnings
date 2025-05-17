@@ -55,7 +55,7 @@ class NaiveNet(torch.nn.Module):
 
         # 8px * 8px * 32 chan -> 10 classes of objects
         self.pre_fc_dropout = nn.Dropout(0.1)
-        self.fc_classifier = nn.Linear(3 * 3 * 32, 10)
+        self.fc_classifier = nn.Linear(3 * 3 * 32, 100)
 
     def forward(self, imgdata):
         # First convolution + rectification +  pool
@@ -133,8 +133,8 @@ def main():
         ]
     )
 
-    # Download the CIFAR10 dataset, or use local copy if it's there
-    training_data = torchvision.datasets.CIFAR10(
+    # Download the CIFAR100 dataset, or use local copy if it's there
+    training_data = torchvision.datasets.CIFAR100(
         root="./data", train=True, download=True, transform=default_xfm
     )
     training_loader = torch.utils.data.DataLoader(
@@ -147,7 +147,7 @@ def main():
     )
 
     # Some images are set aside for validation.
-    validation_data = torchvision.datasets.CIFAR10(
+    validation_data = torchvision.datasets.CIFAR100(
         root="./data", train=False, download=True, transform=passthrough_xfm
     )
     validation_loader = torch.utils.data.DataLoader(
