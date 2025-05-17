@@ -54,7 +54,7 @@ class NaiveNet(torch.nn.Module):
         return clz
 
 
-EPOCHS = 100
+EPOCHS = 10
 
 
 def main():
@@ -71,6 +71,7 @@ def main():
             torchvision.transforms.ToTensor(),
             torchvision.transforms.RandomCrop(32, padding=4),   # Crop up to 4 pixels
             torchvision.transforms.RandomHorizontalFlip(p=0.5), # Flip the image
+            torchvision.transforms.ColorJitter(0.2, 0.2, 0.2, 0.02),        # Fuzz colors and brightness
             torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ]
     )
