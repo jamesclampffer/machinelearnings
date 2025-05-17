@@ -41,6 +41,12 @@ class NaiveNet(torch.nn.Module):
         self.norm3 = nn.BatchNorm2d(32)
         self.activate_fn3 = torch.relu
 
+        # Yet another conv layer
+        self.conv5 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
+        self.norm5 = nn.BatchNorm2d(32)
+        self.activate_fn5 = torch.relu
+        #self.pool5 = nn.MaxPool2d(2,2)
+
         # A 4th conv layer
         self.conv4 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
         self.norm4 = nn.BatchNorm2d(32)
@@ -68,6 +74,13 @@ class NaiveNet(torch.nn.Module):
         imgdata = self.conv3(imgdata)
         imgdata = self.norm3(imgdata)
         imgsata = self.activate_fn3(imgdata)
+
+        # When in doubt, add more conv
+        imgdata = self.conv5(imgdata)
+        imgdata = self.norm5(imgdata)
+        imgdata = self.activate_fn5(imgdata)
+
+
 
         # 4th conv layer, no pooling
         imgdata = self.conv4(imgdata)
