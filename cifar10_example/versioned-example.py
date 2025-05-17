@@ -54,7 +54,7 @@ class NaiveNet(torch.nn.Module):
         return clz
 
 
-EPOCHS = 10
+EPOCHS = 100
 
 
 def main():
@@ -69,10 +69,17 @@ def main():
     default_xfm = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.transforms.RandomHorizontalFlip(p=0.5),
-            torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            torchvision.transforms.RandomCrop(32, padding=4),   # Crop up to 4 pixels
+            torchvision.transforms.RandomHorizontalFlip(p=0.5), # Flip the image
+            torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ]
     )
+
+    passthrough_xfm = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
+
 
     # Download the CIFAR10 dataset, or use local copy if it's there
     training_data = torchvision.datasets.CIFAR10(
@@ -89,7 +96,7 @@ def main():
 
     # Some images are set aside for validation.
     validation_data = torchvision.datasets.CIFAR10(
-        root="./data", train=False, download=True, transform=default_xfm
+        root="./data", train=False, download=True, transform=passthrough_xfm
     )
     validation_loader = torch.utils.data.DataLoader(
         validation_data,
