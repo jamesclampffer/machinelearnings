@@ -25,13 +25,13 @@ class NaiveNet(torch.nn.Module):
 
         # Convolution layers followed by 2x2->1x1 downsampling
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
-        self.norm1 = nn.BatchNorm2d(16) #16 chan
+        self.norm1 = nn.BatchNorm2d(16)  # 16 chan
         self.activate_fn1 = torch.relu
         self.pool1 = nn.MaxPool2d(2, 2)
 
         # Second conv and pool, reduce to 8px*8px, 32 channels
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3)
-        self.norm2 = nn.BatchNorm2d(32) #32 chan
+        self.norm2 = nn.BatchNorm2d(32)  # 32 chan
         self.activate_fn2 = torch.relu
         self.pool2 = nn.MaxPool2d(2, 2)
 
@@ -45,17 +45,17 @@ class NaiveNet(torch.nn.Module):
         self.conv5 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
         self.norm5 = nn.BatchNorm2d(32)
         self.activate_fn5 = torch.relu
-        #self.pool5 = nn.MaxPool2d(2,2)
+        # self.pool5 = nn.MaxPool2d(2,2)
 
         # A 4th conv layer
         self.conv4 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
         self.norm4 = nn.BatchNorm2d(32)
         self.activate_fn4 = torch.relu
-        self.pool4 = nn.MaxPool2d(2,2)
+        self.pool4 = nn.MaxPool2d(2, 2)
 
         # 8px * 8px * 32 chan -> 10 classes of objects
         self.pre_fc_dropout = nn.Dropout(0.1)
-        self.fc_classifier = nn.Linear(3*3*32, 10)
+        self.fc_classifier = nn.Linear(3 * 3 * 32, 10)
 
     def forward(self, imgdata):
         # First convolution + rectification +  pool
@@ -118,9 +118,9 @@ def main():
             torchvision.transforms.ToTensor(),
             torchvision.transforms.RandomCrop(32, padding=4),  # Crop up to 4 pixels
             torchvision.transforms.RandomHorizontalFlip(p=0.5),  # Flip the image
-            torchvision.transforms.RandomRotation(10), # wobble side to side
+            #torchvision.transforms.RandomRotation(10),  # wobble side to side
             torchvision.transforms.ColorJitter(
-                0.2, 0.2, 0.2, 0.02
+                0.1, 0.1, 0.1, 0.02
             ),  # Fuzz colors and brightness
             torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
@@ -195,7 +195,7 @@ def main():
         )
 
         # Print acc on an interval, it's expensive to do every epoch
-        if epoch %5 == 0 and False:
+        if epoch % 5 == 0 and False:
             model.eval()
             correct = 0
             total = 0
@@ -207,9 +207,7 @@ def main():
                     correct += (preds == label).sum().item()
                     total += lab.size(0)
             acc = 100.0 * correct * total
-            print("Validation for epoch {}: {}", epoch+1, acc)
-
-
+            print("Validation for epoch {}: {}", epoch + 1, acc)
 
     # Check accuracy against data the model has not seen
     model.eval()
