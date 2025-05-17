@@ -56,8 +56,8 @@ class NaiveNet(torch.nn.Module):
 
 def main():
     # Speed up training where possible
-    torch.set_num_threads(8)
-    torch.set_num_interop_threads(8)
+    torch.set_num_threads(12)
+    torch.set_num_interop_threads(2)
 
     # Use cuda if available, ROCm doesn't support my Radeon 780m
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,7 +75,7 @@ def main():
         root="./data", train=True, download=True, transform=default_xfm
     )
     training_loader = torch.utils.data.DataLoader(
-        training_data, batch_size=128, shuffle=True, num_workers=8
+        training_data, batch_size=128, shuffle=True, num_workers=8, persistent_workers=True, prefetch_factor=4
     )
 
     # Some images are set aside for validation.
@@ -83,7 +83,7 @@ def main():
         root="./data", train=False, download=True, transform=default_xfm
     )
     validation_loader = torch.utils.data.DataLoader(
-        validation_data, batch_size=128, shuffle=False, num_workers=8
+        validation_data, batch_size=128, shuffle=False, num_workers=8, persistent_workers=True, prefetch_factor=4
     )
 
     # Stand up a model on the compute resource
