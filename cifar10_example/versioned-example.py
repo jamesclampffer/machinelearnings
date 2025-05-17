@@ -45,10 +45,11 @@ class NaiveNet(torch.nn.Module):
         self.conv4 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
         self.norm4 = nn.BatchNorm2d(32)
         self.activate_fn4 = torch.relu
+        self.pool4 = nn.MaxPool2d(2,2)
 
         # 8px * 8px * 32 chan -> 10 classes of objects
         self.pre_fc_dropout = nn.Dropout(0.1)
-        self.fc_classifier = nn.Linear(1568, 10)
+        self.fc_classifier = nn.Linear(3*3*32, 10)
 
     def forward(self, imgdata):
         # First convolution + rectification +  pool
@@ -72,6 +73,7 @@ class NaiveNet(torch.nn.Module):
         imgdata = self.conv4(imgdata)
         imgdata = self.norm4(imgdata)
         imgdata = self.activate_fn4(imgdata)
+        imgdata = self.pool4(imgdata)
 
         # Linearize ahead of fully connected layer
         imgdata = imgdata.view(imgdata.size(0), -1)
