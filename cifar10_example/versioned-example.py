@@ -73,14 +73,16 @@ class NaiveNet(torch.nn.Module):
         # third conv layer, no pooling
         imgdata = self.conv3(imgdata)
         imgdata = self.norm3(imgdata)
-        imgsata = self.activate_fn3(imgdata)
+        imgdata = self.activate_fn3(imgdata)
+        res = imgdata
 
         # When in doubt, add more conv
         imgdata = self.conv5(imgdata)
         imgdata = self.norm5(imgdata)
         imgdata = self.activate_fn5(imgdata)
 
-
+        # fwd resnet style
+        imgdata = imgdata + res
 
         # 4th conv layer, no pooling
         imgdata = self.conv4(imgdata)
