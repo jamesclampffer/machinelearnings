@@ -6,7 +6,9 @@ import torchvision.transforms as transforms
 from torchvision.models import mobilenet_v2
 from torch.utils.data import DataLoader
 
-def main()
+def main():
+    torch.set_num_threads(8)
+
     # Runtime config
     BATCH_SIZE = 128
     EPOCHS = 30
