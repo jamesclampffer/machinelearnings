@@ -54,6 +54,9 @@ class NaiveNet(torch.nn.Module):
         return clz
 
 
+EPOCHS = 10
+
+
 def main():
     # Speed up training where possible
     torch.set_num_threads(12)
@@ -66,6 +69,7 @@ def main():
     default_xfm = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
+            torchvision.transforms.transforms.RandomHorizontalFlip(p=0.5),
             torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
     )
@@ -75,7 +79,12 @@ def main():
         root="./data", train=True, download=True, transform=default_xfm
     )
     training_loader = torch.utils.data.DataLoader(
-        training_data, batch_size=128, shuffle=True, num_workers=8, persistent_workers=True, prefetch_factor=4
+        training_data,
+        batch_size=128,
+        shuffle=True,
+        num_workers=8,
+        persistent_workers=True,
+        prefetch_factor=4,
     )
 
     # Some images are set aside for validation.
@@ -83,7 +92,12 @@ def main():
         root="./data", train=False, download=True, transform=default_xfm
     )
     validation_loader = torch.utils.data.DataLoader(
-        validation_data, batch_size=128, shuffle=False, num_workers=8, persistent_workers=True, prefetch_factor=4
+        validation_data,
+        batch_size=128,
+        shuffle=False,
+        num_workers=8,
+        persistent_workers=True,
+        prefetch_factor=4,
     )
 
     # Stand up a model on the compute resource
@@ -94,9 +108,9 @@ def main():
     optimizer = opt.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
     # The whole training loop
-    for epoch in range(10):
+    for epoch in range(EPOCHS):
         """The training loop, run through the whole training set 10 times (epochs)"""
-        print("Training epoch{} of {}".format(epoch + 1, 10))
+        print("Training epoch{} of {}".format(epoch + 1, EPOCHS))
         model.train()
         loss_acc = 0
         for images, labels in training_loader:
@@ -115,7 +129,7 @@ def main():
             loss_acc += loss.item()
         print(
             "Done training epoch {}/{}, loss for epoch: {}".format(
-                epoch + 1, 10, loss_acc
+                epoch + 1, EPOCHS, loss_acc
             )
         )
 
