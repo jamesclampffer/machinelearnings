@@ -35,6 +35,12 @@ class NaiveNet(torch.nn.Module):
         self.activate_fn2 = torch.relu
         self.pool2 = nn.MaxPool2d(2, 2)
 
+        # A third conv layer, same input/output channels and map size
+        self.conv3 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
+        self.norm3 = nn.BatchNorm2d(32)
+        self.activate_fn3 = torch.relu
+
+
         # 8px * 8px * 32 chan -> 10 classes of objects
         self.pre_fc_dropout = nn.Dropout(0.1)
         self.fc_classifier = nn.Linear(1568, 10)
@@ -51,6 +57,11 @@ class NaiveNet(torch.nn.Module):
         imgdata = self.norm2(imgdata)
         imgdata = self.activate_fn2(imgdata)
         imgdata = self.pool2(imgdata)
+
+        # third conv layer, no pooling
+        imgdata = self.conv3(imgdata)
+        imgdata = self.norm3(imgdata)
+        imgsata = self.activate_fn3(imgdata)
 
         # Linearize ahead of fully connected layer
         imgdata = imgdata.view(imgdata.size(0), -1)
