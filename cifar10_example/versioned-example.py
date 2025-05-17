@@ -9,6 +9,7 @@ import torch
 import torch.utils
 import torch.nn as nn
 import torch.optim as opt
+import torch.optim.lr_scheduler
 import torchvision
 import torchvision.datasets
 import torchvision.utils
@@ -69,18 +70,21 @@ def main():
     default_xfm = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.RandomCrop(32, padding=4),   # Crop up to 4 pixels
-            torchvision.transforms.RandomHorizontalFlip(p=0.5), # Flip the image
-            torchvision.transforms.ColorJitter(0.2, 0.2, 0.2, 0.02),        # Fuzz colors and brightness
-            torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            torchvision.transforms.RandomCrop(32, padding=4),  # Crop up to 4 pixels
+            torchvision.transforms.RandomHorizontalFlip(p=0.5),  # Flip the image
+            torchvision.transforms.ColorJitter(
+                0.2, 0.2, 0.2, 0.02
+            ),  # Fuzz colors and brightness
+            torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
     )
 
-    passthrough_xfm = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        ])
-
+    passthrough_xfm = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        ]
+    )
 
     # Download the CIFAR10 dataset, or use local copy if it's there
     training_data = torchvision.datasets.CIFAR10(
@@ -114,6 +118,7 @@ def main():
     # Ignore for now, required for training
     criterion = nn.CrossEntropyLoss()
     optimizer = opt.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    scheduler = opt.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
     # The whole training loop
     for epoch in range(EPOCHS):
@@ -133,11 +138,12 @@ def main():
 
             # recompute learning rate
             optimizer.step()
+            scheduler.step()
 
             loss_acc += loss.item()
         print(
-            "Done training epoch {}/{}, loss for epoch: {}".format(
-                epoch + 1, EPOCHS, loss_acc
+            "Done training epoch {}/{}, loss for epoch: {}, lr: {}".format(
+                epoch + 1, EPOCHS, loss_acc, scheduler.get_last_lr()[0]
             )
         )
 
