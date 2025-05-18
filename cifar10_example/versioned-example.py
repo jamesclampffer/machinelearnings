@@ -118,7 +118,7 @@ def main():
             torchvision.transforms.ToTensor(),
             torchvision.transforms.RandomCrop(32, padding=4),  # Crop up to 4 pixels
             torchvision.transforms.RandomHorizontalFlip(p=0.5),  # Flip the image
-            #torchvision.transforms.RandomRotation(10),  # wobble side to side
+            # torchvision.transforms.RandomRotation(10),  # wobble side to side
             torchvision.transforms.ColorJitter(
                 0.1, 0.1, 0.1, 0.02
             ),  # Fuzz colors and brightness
