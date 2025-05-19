@@ -29,6 +29,8 @@ class SimpleConvBlock(nn.Module):
         self.enable_pool = enable_pool
         if enable_pool:
             self.pool = nn.MaxPool2d(2, 2)
+        self.drop = nn.Dropout(0.05)
+
 
     def forward(self, x):
         x = self.conv(x)
@@ -36,6 +38,7 @@ class SimpleConvBlock(nn.Module):
         x = self.activation_fn(x)
         if self.enable_pool:
             x = self.pool(x)
+        x = self.drop(x)
         return x
 
 
@@ -56,7 +59,6 @@ class NaiveNet(torch.nn.Module):
         self.norm1 = nn.BatchNorm2d(16)  # 16 chan
         self.activate_fn1 = torch.relu
         self.pool1 = nn.MaxPool2d(2, 2)
-        ##self.convblock1 = SimpleConvBlock(3,16,True)
 
         # Second conv and pool, reduce to 8px*8px, 32 channels
         self.convblock2 = SimpleConvBlock(16, 32, True)
@@ -65,16 +67,14 @@ class NaiveNet(torch.nn.Module):
         self.convblock3 = SimpleConvBlock(32, 32, False)
 
         # Yet another conv layer
-        self.convblock5 = SimpleConvBlock(32, 32, False)
+        self.convblock4 = SimpleConvBlock(32, 32, False)
 
         # A 4th conv layer
-        self.convblock4 = SimpleConvBlock(32, 32, True)
+        self.convblock5 = SimpleConvBlock(32, 32, True)
 
         # 8px * 8px * 32 chan -> 10 classes of objects
         self.pre_fc_dropout = nn.Dropout(0.1)
-        # self.fc_classifier = nn.Linear(3 * 3 * 32, 100)
-        # self.fc_classifier = nn.Linear(1568, 100)
-        self.fc_classifier = None  # nn.Linear(288, 100)
+        self.fc_classifier = None
 
     def forward(self, imgdata):
         # First convolution + rectification +  pool
@@ -90,27 +90,24 @@ class NaiveNet(torch.nn.Module):
         # third conv layer, no pool
         imgdata = self.convblock3(imgdata)
 
-        res = imgdata
+        #res = imgdata
 
         # When in doubt, add more conv
-        imgdata = self.convblock5(imgdata)
+        imgdata = self.convblock4(imgdata)
 
         # fwd resnet style
-        if SKIP_LAYER:
-            imgdata = imgdata + res
+        #if SKIP_LAYER:
+        #    imgdata = imgdata + res
 
         # 4th conv layer, no pooling
-        imgdata = self.convblock4(imgdata)
+        imgdata = self.convblock5(imgdata)
 
         # print("Feature shape before flattening:", imgdata.shape)
         # Linearize ahead of fully connected layer
+
+        imgdata = self.pre_fc_dropout(imgdata)
+
         imgdata = imgdata.view(imgdata.size(0), -1)
-
-        # Zero out some weights to reduce redundancy and avoid overfitting
-        # imgdata = self.pre_fc_dropout(imgdata)
-
-        # FC layer to determine class of object in img
-        # clz = self.fc_classifier(imgdata)
 
         if self.fc_classifier is None:
             self.fc_classifier = nn.Linear(imgdata.size(1), 100).to(imgdata.device)
@@ -148,12 +145,6 @@ def main():
             torchvision.transforms.Resize((64, 64)),
             torchvision.transforms.ToTensor(),
             torchvision.transforms.RandomCrop(IMG_X, padding=4),  # Crop up to 4 pixels
-            torchvision.transforms.RandomAffine(
-                degrees=30,  # rotation range (-30, +30 degrees)
-                translate=(0.1, 0.1),  # up to 10% shift in both x and y
-                scale=(0.9, 1.1),  # zoom in/out
-                shear=10,  # shear angle in degrees (x-axis only)
-            ),
             torchvision.transforms.RandomHorizontalFlip(p=0.5),  # Flip the image
             torchvision.transforms.ColorJitter(
                 0.1, 0.1, 0.1, 0.02
@@ -205,7 +196,7 @@ def main():
     # Ignore for now, required for training
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(
-        model.parameters(), lr=INITIAL_LR, momentum=INITIAL_MOMENTUM
+        model.parameters(), lr=INITIAL_LR, momentum=INITIAL_MOMENTUM, weight_decay=1e-4
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
@@ -227,9 +218,10 @@ def main():
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
-            scheduler.step()
 
             loss_acc += loss.item()
+        scheduler.step()
+
         print(
             "Done training epoch {}/{}, loss for epoch: {}, lr: {}".format(
                 epoch + 1, EPOCHS, loss_acc, scheduler.get_last_lr()[0]
@@ -237,13 +229,11 @@ def main():
         )
 
         # Print acc on an interval, it's expensive to do every epoch
-        if True:
+        if epoch % STATS_INTERVAL == 0:
             acc = check_acc(model, validation_loader, device)
             print("Epoch acc: {}".format(acc))
         else:
             print("Skipping test check for epoch {}".format(epoch))
-
-    # End of training loop
 
     # Check accuracy against data the model has not seen
     num = check_acc(model, validation_loader, device)
@@ -270,9 +260,9 @@ def check_acc(model, loader, device):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Simple nn")
-    p.add_argument("--cpu_num", type=int, default=8)
-    p.add_argument("--prefetch_factor", type=int, default=4)
-    p.add_argument("--epochs", type=int, default=1)
+    p.add_argument("--cpu_num", type=int, default=6, help="Cores to dedicate to process")
+    p.add_argument("--prefetch_factor", type=int, default=12)
+    p.add_argument("--epochs", type=int, default=20)
     p.add_argument("--batch_size", type=int, default=128)
     p.add_argument("--initial_lr", type=float, default=0.01)
     p.add_argument("--initial_momentum", type=float, default=0.9)
@@ -282,7 +272,7 @@ if __name__ == "__main__":
         default=5,
         help="Calculate accuracy every N epochs",
     ),
-    p.add_argument("--skip_layer", type=bool, default=True)
+    p.add_argument("--skip_layer", type=bool, default=False, help="currently ignored")
     args = p.parse_args()
 
     CPU_NUM = args.cpu_num
@@ -294,6 +284,6 @@ if __name__ == "__main__":
     STATS_INTERVAL = args.stats_interval
     SKIP_LAYER = args.skip_layer
 
-    INTEROP_THREADS = int(CPU_NUM / 2) if CPU_NUM > 2 else 1
+    INTEROP_THREADS = int(CPU_NUM / 1.5) if CPU_NUM > 2 else 1
 
     main()
