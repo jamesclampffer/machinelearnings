@@ -16,25 +16,44 @@ import torchvision
 import torchvision.datasets
 
 
+class SimpleConvBlock(nn.Module):
+    """Stop repeating conv->norm->relu->pool"""
+
+    def __init__(self, in_chan, out_chan, enable_pool, activation_fn=torch.relu):
+        super(SimpleConvBlock, self).__init__()
+        self.conv = nn.Conv2d(in_chan, out_chan, kernel_size=3, padding=1)
+        self.norm = nn.BatchNorm2d(out_chan)
+        self.activation_fn = activation_fn
+
+        self.enable_pool = enable_pool
+        if enable_pool:
+            self.pool = nn.MaxPool2d(2,2)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.norm(x)
+        x = self.activation_fn(x)
+        if self.enable_pool:
+            x = self.pool(x)
+        return x
+
 # Define the "shape" of the network
 class NaiveNet(torch.nn.Module):
     """A very simple model architecture"""
 
     def __init__(self):
         """Set up the operators this simple model will use"""
-        super(NaiveNet, self).__init__()
+        super().__init__()
 
         # Convolution layers followed by 2x2->1x1 downsampling
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3)
         self.norm1 = nn.BatchNorm2d(16)  # 16 chan
         self.activate_fn1 = torch.relu
         self.pool1 = nn.MaxPool2d(2, 2)
+        #self.convblock1 = SimpleConvBlock(3,16,True)
 
         # Second conv and pool, reduce to 8px*8px, 32 channels
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3)
-        self.norm2 = nn.BatchNorm2d(32)  # 32 chan
-        self.activate_fn2 = torch.relu
-        self.pool2 = nn.MaxPool2d(2, 2)
+        self.convblock2 = SimpleConvBlock(16, 32, True)
 
         # A third conv layer, same input/output channels and map size
         # TODO: look at pooling and adding channels here
@@ -43,16 +62,14 @@ class NaiveNet(torch.nn.Module):
         self.activate_fn3 = torch.relu
 
         # Yet another conv layer
-        self.conv5 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
-        self.norm5 = nn.BatchNorm2d(32)
-        self.activate_fn5 = torch.relu
+        self.convblock5 = SimpleConvBlock(32,32,False)
+        #self.conv5 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
+        #self.norm5 = nn.BatchNorm2d(32)
+        #self.activate_fn5 = torch.relu
         # self.pool5 = nn.MaxPool2d(2,2)
 
         # A 4th conv layer
-        self.conv4 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
-        self.norm4 = nn.BatchNorm2d(32)
-        self.activate_fn4 = torch.relu
-        self.pool4 = nn.MaxPool2d(2, 2)
+        self.convblock4 = SimpleConvBlock(32,32, True)
 
         # 8px * 8px * 32 chan -> 10 classes of objects
         self.pre_fc_dropout = nn.Dropout(0.1)
@@ -64,12 +81,10 @@ class NaiveNet(torch.nn.Module):
         imgdata = self.norm1(imgdata)
         imgdata = self.activate_fn1(imgdata)
         imgdata = self.pool1(imgdata)
+        #imgdata = self.convblock1(imgdata)
 
         # second convolution + pool
-        imgdata = self.conv2(imgdata)
-        imgdata = self.norm2(imgdata)
-        imgdata = self.activate_fn2(imgdata)
-        imgdata = self.pool2(imgdata)
+        imgdata = self.convblock2(imgdata)
 
         # third conv layer, no pooling
         imgdata = self.conv3(imgdata)
@@ -78,25 +93,23 @@ class NaiveNet(torch.nn.Module):
         res = imgdata
 
         # When in doubt, add more conv
-        imgdata = self.conv5(imgdata)
-        imgdata = self.norm5(imgdata)
-        imgdata = self.activate_fn5(imgdata)
+        #imgdata = self.conv5(imgdata)
+        #imgdata = self.norm5(imgdata)
+        #imgdata = self.activate_fn5(imgdata)
+        imgdata = self.convblock5(imgdata)
 
         # fwd resnet style
         if SKIP_LAYER:
             imgdata = imgdata + res
 
         # 4th conv layer, no pooling
-        imgdata = self.conv4(imgdata)
-        imgdata = self.norm4(imgdata)
-        imgdata = self.activate_fn4(imgdata)
-        imgdata = self.pool4(imgdata)
+        imgdata = self.convblock4(imgdata)
 
         # Linearize ahead of fully connected layer
         imgdata = imgdata.view(imgdata.size(0), -1)
 
         # Zero out some weights to reduce redundancy and avoid overfitting
-        self.pre_fc_dropout(imgdata)
+        imgdata = self.pre_fc_dropout(imgdata)
 
         # FC layer to determine class of object in img
         clz = self.fc_classifier(imgdata)
