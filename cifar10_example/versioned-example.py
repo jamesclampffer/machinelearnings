@@ -83,7 +83,8 @@ class NaiveNet(torch.nn.Module):
         imgdata = self.activate_fn5(imgdata)
 
         # fwd resnet style
-        imgdata = imgdata + res
+        if SKIP_LAYER:
+            imgdata = imgdata + res
 
         # 4th conv layer, no pooling
         imgdata = self.conv4(imgdata)
@@ -111,7 +112,7 @@ INITIAL_LR = None
 INITIAL_MOMENTUM = None
 STATS_INTERVAL = None
 INTEROP_THREADS = None
-
+SKIP_LAYER = None
 
 def main():
     # Speed up training where possible
@@ -251,7 +252,8 @@ if __name__ == "__main__":
         type=int,
         default=5,
         help="Calculate accuracy every N epochs",
-    )
+    ),
+    p.add_argument("--skip_layer", type=bool, default=True)
     args = p.parse_args()
 
     CPU_NUM = args.cpu_num
@@ -261,6 +263,7 @@ if __name__ == "__main__":
     INITIAL_LR = args.initial_lr
     INITIAL_MOMENTUM = args.initial_momentum
     STATS_INTERVAL = args.stats_interval
+    SKIP_LAYER= args.skip_layer
 
     INTEROP_THREADS = int(CPU_NUM / 2) if CPU_NUM > 2 else 1
 
