@@ -5,10 +5,11 @@ A simple convolutional neural network that's quick to retrain.
 
 """
 
+import argparse
 import torch
 import torch.utils
 import torch.nn as nn
-import torch.optim as opt
+import torch.optim  # as opt
 import torch.optim.lr_scheduler
 import torchvision
 import torchvision.datasets
@@ -101,18 +102,26 @@ class NaiveNet(torch.nn.Module):
         return clz
 
 
-EPOCHS = 10
+# Command line params
+CPU_NUM = None
+PREFETCH_FACTOR = None
+EPOCHS = None
+BATCH_SIZE = None
+INITIAL_LR = None
+INITIAL_MOMENTUM = None
+STATS_INTERVAL = None
+INTEROP_THREADS = None
 
 
 def main():
     # Speed up training where possible
-    torch.set_num_threads(12)
-    torch.set_num_interop_threads(2)
+    torch.set_num_threads(CPU_NUM)
+    torch.set_num_interop_threads(INTEROP_THREADS)
 
     # Use cuda if available, ROCm doesn't support my Radeon 780m
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # img formatting
+    # Augment images used for training
     default_xfm = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
@@ -126,6 +135,7 @@ def main():
         ]
     )
 
+    # Don't bother transforming test set (is this correct?)
     passthrough_xfm = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
@@ -139,11 +149,11 @@ def main():
     )
     training_loader = torch.utils.data.DataLoader(
         training_data,
-        batch_size=128,
+        batch_size=BATCH_SIZE,
         shuffle=True,
-        num_workers=8,
+        num_workers=CPU_NUM,
         persistent_workers=True,
-        prefetch_factor=4,
+        prefetch_factor=PREFETCH_FACTOR,
     )
 
     # Some images are set aside for validation.
@@ -152,11 +162,11 @@ def main():
     )
     validation_loader = torch.utils.data.DataLoader(
         validation_data,
-        batch_size=128,
+        batch_size=BATCH_SIZE,
         shuffle=False,
-        num_workers=8,
+        num_workers=CPU_NUM,
         persistent_workers=True,
-        prefetch_factor=4,
+        prefetch_factor=PREFETCH_FACTOR,
     )
 
     # Stand up a model on the compute resource
@@ -164,13 +174,15 @@ def main():
 
     # Ignore for now, required for training
     criterion = nn.CrossEntropyLoss()
-    optimizer = opt.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    scheduler = opt.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
+    optimizer = torch.optim.SGD(
+        model.parameters(), lr=INITIAL_LR, momentum=INITIAL_MOMENTUM
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
     # The whole training loop
     for epoch in range(EPOCHS):
         """The training loop, run through the whole training set 10 times (epochs)"""
-        print("Training epoch{} of {}".format(epoch + 1, EPOCHS))
+        print("Training epoch {} of {}".format(epoch + 1, EPOCHS))
         model.train()
         loss_acc = 0
         for images, labels in training_loader:
@@ -195,34 +207,61 @@ def main():
         )
 
         # Print acc on an interval, it's expensive to do every epoch
-        if epoch % 5 == 0 and False:
-            model.eval()
-            correct = 0
-            total = 0
-            with torch.no_grad():
-                for img, label in validation_loader:
-                    img, label = img.to(device), label.to(device)
-                    out = model(images)
-                    _, preds = torch.max(out, 1)
-                    correct += (preds == label).sum().item()
-                    total += lab.size(0)
-            acc = 100.0 * correct * total
-            print("Validation for epoch {}: {}", epoch + 1, acc)
+        if True:
+            acc = check_acc(model, validation_loader, device)
+            print("Epoch acc: {}".format(acc))
+        else:
+            print("Skipping test check for epoch {}".format(epoch))
+
+    # End of training loop
 
     # Check accuracy against data the model has not seen
+    num = check_acc(model, validation_loader, device)
+    print("Overall test accuracy: {}".format(num))
+
+
+def check_acc(model, loader, device):
+    """Run the given set against the model \
+    Note: The dataset's transforms will be re-applied"""
     model.eval()
-    correct = 0
+    acc = 0
     total = 0
     with torch.no_grad():
-        for images, labels in validation_loader:
+        for images, labels in loader:
             images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            _, preds = torch.max(outputs, 1)
-            correct += (preds == labels).sum().item()
+            outvec = model(images)
+            discard, predicates = torch.max(outvec, 1)
+            acc += (predicates == labels).sum().item()
             total += labels.size(0)
-
-    print("Overall test accuracy: {}".format(100 * correct / float(total)))
+    if total == 0:
+        return 0.0
+    return float(acc) / float(total) * 100.0
 
 
 if __name__ == "__main__":
+    p = argparse.ArgumentParser(description="Simple nn")
+    p.add_argument("--cpu_num", type=int, default=8)
+    p.add_argument("--prefetch_factor", type=int, default=4)
+    p.add_argument("--epochs", type=int, default=1)
+    p.add_argument("--batch_size", type=int, default=128)
+    p.add_argument("--initial_lr", type=float, default=0.01)
+    p.add_argument("--initial_momentum", type=float, default=0.9)
+    p.add_argument(
+        "--stats_interval",
+        type=int,
+        default=5,
+        help="Calculate accuracy every N epochs",
+    )
+    args = p.parse_args()
+
+    CPU_NUM = args.cpu_num
+    PREFETCH_FACTOR = args.prefetch_factor
+    EPOCHS = args.epochs
+    BATCH_SIZE = args.batch_size
+    INITIAL_LR = args.initial_lr
+    INITIAL_MOMENTUM = args.initial_momentum
+    STATS_INTERVAL = args.stats_interval
+
+    INTEROP_THREADS = int(CPU_NUM / 2) if CPU_NUM > 2 else 1
+
     main()
