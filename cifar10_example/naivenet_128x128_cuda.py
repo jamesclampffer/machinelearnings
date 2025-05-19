@@ -10,11 +10,43 @@ import torch
 import torch.cuda.amp
 import torch.utils
 import torch.nn as nn
+import torch.nn.functional
 import torch.optim
 import torch.optim.lr_scheduler
 import torchvision
 import torchvision.datasets
 import torchvision.transforms
+
+
+class SimpleBottleneck(nn.Module):
+    def __init__(self, in_chan, out_chan, neck_chan):
+        super().__init__()
+        # expand channels
+        self.explode = nn.Conv2d(in_chan, neck_chan, kernel_size=1)
+        self.explode_norm = nn.BatchNorm2d(neck_chan)
+        self.explode_activate = nn.ReLU()
+
+        # depthwise conv through expanded channels
+        self.core = nn.Conv2d(neck_chan, neck_chan, kernel_size=3, padding=1)
+        self.core_norm = nn.BatchNorm2d(neck_chan)
+        self.core_activate = nn.ReLU()
+
+        # reduce channel count
+        self.implode = nn.Conv2d(neck_chan, out_chan, kernel_size=1)
+        self.implode_norm = nn.BatchNorm2d(out_chan)
+        self.implode_activate = nn.ReLU()
+
+    def forward(self, x):
+        x = self.explode(x)
+        x = self.explode_norm(x)
+        x = self.explode_activate(x)
+        x = self.core(x)
+        x = self.core_norm(x)
+        x = self.core_activate(x)
+        x = self.implode(x)
+        x = self.implode_norm(x)
+        x = self.implode_activate(x)
+        return x
 
 
 class SimpleConvBlock(nn.Module):
@@ -55,22 +87,20 @@ class NaiveNet(torch.nn.Module):
         super().__init__()
 
         # Convolution layers followed by 2x2->1x1 downsampling
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=3)
-        self.norm1 = nn.BatchNorm2d(16)  # 16 chan
-        self.activate_fn1 = torch.relu
+        self.neck1 = SimpleBottleneck(3, 32, 64)
         self.pool1 = nn.MaxPool2d(2, 2)
 
         # Second conv and pool, reduce to 8px*8px, 32 channels
-        self.convblock2 = SimpleConvBlock(16, 32, True)
+        self.convblock2 = SimpleConvBlock(32, 64, True)
 
         # A third conv layer, same input/output channels and map size
-        self.convblock3 = SimpleConvBlock(32, 32, False)
+        self.convblock3 = SimpleConvBlock(64, 64, False)
 
         # Yet another conv layer
-        self.convblock4 = SimpleConvBlock(32, 32, False)
+        self.convblock4 = SimpleConvBlock(64, 64, False)
 
         # A 4th conv layer
-        self.convblock5 = SimpleConvBlock(32, 32, True)
+        self.convblock5 = SimpleConvBlock(64, 32, True)
 
         # 8px * 8px * 32 chan -> 10 classes of objects
         self.pre_fc_dropout = nn.Dropout(0.1)
@@ -78,11 +108,8 @@ class NaiveNet(torch.nn.Module):
 
     def forward(self, imgdata):
         # First convolution + rectification +  pool
-        imgdata = self.conv1(imgdata)
-        imgdata = self.norm1(imgdata)
-        imgdata = self.activate_fn1(imgdata)
+        imgdata = self.neck1(imgdata)
         imgdata = self.pool1(imgdata)
-        ##imgdata = self.convblock1(imgdata)
 
         # second convolution + pool
         imgdata = self.convblock2(imgdata)
@@ -95,10 +122,6 @@ class NaiveNet(torch.nn.Module):
         # When in doubt, add more conv
         imgdata = self.convblock4(imgdata)
 
-        # fwd resnet style
-        #if SKIP_LAYER:
-        #    imgdata = imgdata + res
-
         # 4th conv layer, no pooling
         imgdata = self.convblock5(imgdata)
 
@@ -106,7 +129,7 @@ class NaiveNet(torch.nn.Module):
         # Linearize ahead of fully connected layer
 
         imgdata = self.pre_fc_dropout(imgdata)
-
+        imgdata = torch.nn.functional.adaptive_avg_pool2d(imgdata, 1)
         imgdata = imgdata.view(imgdata.size(0), -1)
 
         if self.fc_classifier is None:
@@ -229,7 +252,7 @@ def main():
         )
 
         # Print acc on an interval, it's expensive to do every epoch
-        if epoch % STATS_INTERVAL == 0:
+        if (epoch+1) % STATS_INTERVAL == 0:
             acc = check_acc(model, validation_loader, device)
             print("Epoch acc: {}".format(acc))
         else:
