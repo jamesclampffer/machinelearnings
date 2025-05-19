@@ -14,6 +14,7 @@ import torch.optim
 import torch.optim.lr_scheduler
 import torchvision
 import torchvision.datasets
+import torchvision.transforms
 
 
 class SimpleConvBlock(nn.Module):
@@ -27,7 +28,7 @@ class SimpleConvBlock(nn.Module):
 
         self.enable_pool = enable_pool
         if enable_pool:
-            self.pool = nn.MaxPool2d(2,2)
+            self.pool = nn.MaxPool2d(2, 2)
 
     def forward(self, x):
         x = self.conv(x)
@@ -36,6 +37,11 @@ class SimpleConvBlock(nn.Module):
         if self.enable_pool:
             x = self.pool(x)
         return x
+
+
+IMG_X = 64
+IMG_Y = 64
+
 
 # Define the "shape" of the network
 class NaiveNet(torch.nn.Module):
@@ -56,17 +62,19 @@ class NaiveNet(torch.nn.Module):
         self.convblock2 = SimpleConvBlock(16, 32, True)
 
         # A third conv layer, same input/output channels and map size
-        self.convblock3 = SimpleConvBlock(32,32,False)
+        self.convblock3 = SimpleConvBlock(32, 32, False)
 
         # Yet another conv layer
-        self.convblock5 = SimpleConvBlock(32,32,False)
+        self.convblock5 = SimpleConvBlock(32, 32, False)
 
         # A 4th conv layer
-        self.convblock4 = SimpleConvBlock(32,32, True)
+        self.convblock4 = SimpleConvBlock(32, 32, True)
 
         # 8px * 8px * 32 chan -> 10 classes of objects
         self.pre_fc_dropout = nn.Dropout(0.1)
-        self.fc_classifier = nn.Linear(3 * 3 * 32, 100)
+        # self.fc_classifier = nn.Linear(3 * 3 * 32, 100)
+        # self.fc_classifier = nn.Linear(1568, 100)
+        self.fc_classifier = None  # nn.Linear(288, 100)
 
     def forward(self, imgdata):
         # First convolution + rectification +  pool
@@ -94,15 +102,20 @@ class NaiveNet(torch.nn.Module):
         # 4th conv layer, no pooling
         imgdata = self.convblock4(imgdata)
 
+        # print("Feature shape before flattening:", imgdata.shape)
         # Linearize ahead of fully connected layer
         imgdata = imgdata.view(imgdata.size(0), -1)
 
         # Zero out some weights to reduce redundancy and avoid overfitting
-        imgdata = self.pre_fc_dropout(imgdata)
+        # imgdata = self.pre_fc_dropout(imgdata)
 
         # FC layer to determine class of object in img
-        clz = self.fc_classifier(imgdata)
-        return clz
+        # clz = self.fc_classifier(imgdata)
+
+        if self.fc_classifier is None:
+            self.fc_classifier = nn.Linear(imgdata.size(1), 100).to(imgdata.device)
+
+        return self.fc_classifier(imgdata)
 
 
 # Command line params
@@ -116,6 +129,7 @@ STATS_INTERVAL = None
 INTEROP_THREADS = None
 SKIP_LAYER = None
 
+
 def main():
     # Speed up training where possible
     torch.set_num_threads(CPU_NUM)
@@ -124,16 +138,22 @@ def main():
     # Use cuda if available, ROCm doesn't support my Radeon 780m
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device_type = 'cuda' if torch.cuda.is_available() else 'cpu'
-    enable_cuda_amp = device_type == 'cuda'
+    device_type = "cuda" if torch.cuda.is_available() else "cpu"
+    enable_cuda_amp = device_type == "cuda"
     scaler = torch.cuda.amp.GradScaler(enabled=enable_cuda_amp)
-
 
     # Augment images used for training
     default_xfm = torchvision.transforms.Compose(
         [
+            torchvision.transforms.Resize((64, 64)),
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.RandomCrop(32, padding=4),  # Crop up to 4 pixels
+            torchvision.transforms.RandomCrop(IMG_X, padding=4),  # Crop up to 4 pixels
+            torchvision.transforms.RandomAffine(
+                degrees=30,  # rotation range (-30, +30 degrees)
+                translate=(0.1, 0.1),  # up to 10% shift in both x and y
+                scale=(0.9, 1.1),  # zoom in/out
+                shear=10,  # shear angle in degrees (x-axis only)
+            ),
             torchvision.transforms.RandomHorizontalFlip(p=0.5),  # Flip the image
             torchvision.transforms.ColorJitter(
                 0.1, 0.1, 0.1, 0.02
@@ -145,6 +165,7 @@ def main():
     # Don't bother transforming test set (is this correct?)
     passthrough_xfm = torchvision.transforms.Compose(
         [
+            torchvision.transforms.Resize((64, 64)),
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
@@ -161,7 +182,7 @@ def main():
         num_workers=CPU_NUM,
         persistent_workers=True,
         prefetch_factor=PREFETCH_FACTOR,
-        pin_memory=True
+        pin_memory=True,
     )
 
     # Some images are set aside for validation.
@@ -175,7 +196,7 @@ def main():
         num_workers=CPU_NUM,
         persistent_workers=True,
         prefetch_factor=PREFETCH_FACTOR,
-        pin_memory=True
+        pin_memory=True,
     )
 
     # Stand up a model on the compute resource
@@ -271,7 +292,7 @@ if __name__ == "__main__":
     INITIAL_LR = args.initial_lr
     INITIAL_MOMENTUM = args.initial_momentum
     STATS_INTERVAL = args.stats_interval
-    SKIP_LAYER= args.skip_layer
+    SKIP_LAYER = args.skip_layer
 
     INTEROP_THREADS = int(CPU_NUM / 2) if CPU_NUM > 2 else 1
 
