@@ -18,10 +18,26 @@ import torchvision.datasets
 import torchvision.transforms
 
 
+class SimpleResBlock(nn.Module):
+    def __init__(self, chan_io):
+        super().__init__()
+        self.conv1 = nn.Conv2d(chan_io, chan_io, kernel_size=3, padding=1, bias=False)
+        self.norm1 = nn.BatchNorm2d(chan_io)
+        self.activation_fn = nn.ReLU()
+        self.conv2 = nn.Conv2d(chan_io, chan_io, kernel_size=3, padding=1, bias=False)
+        self.norm2 = nn.BatchNorm2d(chan_io)
+    
+    def forward(self, x):
+        initial = x
+        layer1 = self.activation_fn(self.norm1(self.conv1(x)))
+        layer2 = self.norm2(self.conv2(layer1))
+        layer2 += initial
+        return self.activation_fn(layer2)
+
 class SimpleBottleneck(nn.Module):
     def __init__(self, in_chan, out_chan, neck_chan):
         super().__init__()
-        # expand channels
+        # expand channels TODO: sequential.Compose these
         self.explode = nn.Conv2d(in_chan, neck_chan, kernel_size=1)
         self.explode_norm = nn.BatchNorm2d(neck_chan)
         self.explode_activate = nn.ReLU()
@@ -51,7 +67,6 @@ class SimpleBottleneck(nn.Module):
 
 class SimpleConvBlock(nn.Module):
     """Stop repeating conv->norm->relu->pool"""
-
     def __init__(self, in_chan, out_chan, enable_pool, activation_fn=torch.relu):
         super(SimpleConvBlock, self).__init__()
         self.conv = nn.Conv2d(in_chan, out_chan, kernel_size=3, padding=1)
@@ -63,7 +78,6 @@ class SimpleConvBlock(nn.Module):
             self.pool = nn.MaxPool2d(2, 2)
         self.drop = nn.Dropout(0.05)
 
-
     def forward(self, x):
         x = self.conv(x)
         x = self.norm(x)
@@ -73,7 +87,7 @@ class SimpleConvBlock(nn.Module):
         x = self.drop(x)
         return x
 
-
+# Using CIFAR10/CIFAR100 scaled up by some integer
 IMG_X = 64
 IMG_Y = 64
 
@@ -89,6 +103,7 @@ class NaiveNet(torch.nn.Module):
         # Convolution layers followed by 2x2->1x1 downsampling
         self.neck1 = SimpleBottleneck(3, 32, 64)
         self.pool1 = nn.MaxPool2d(2, 2)
+        self.res1 = SimpleResBlock(32)
 
         # Second conv and pool, reduce to 8px*8px, 32 channels
         self.convblock2 = SimpleConvBlock(32, 64, True)
@@ -110,6 +125,7 @@ class NaiveNet(torch.nn.Module):
         # First convolution + rectification +  pool
         imgdata = self.neck1(imgdata)
         imgdata = self.pool1(imgdata)
+        imgdata = self.res1(imgdata)
 
         # second convolution + pool
         imgdata = self.convblock2(imgdata)
