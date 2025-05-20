@@ -113,6 +113,8 @@ class NaiveNet(torch.nn.Module):
 
         # A third conv layer, same input/output channels and map size
         self.convblock3 = SimpleConvBlock(64, 64, False)
+        self.res3 = SimpleResBlock(64)
+        self.neck3 = SimpleBottleneck(64,64,128)
 
         # Yet another conv layer
         self.convblock4 = SimpleConvBlock(64, 64, False)
@@ -135,8 +137,8 @@ class NaiveNet(torch.nn.Module):
 
         # third conv layer, no pool
         imgdata = self.convblock3(imgdata)
-
-        # res = imgdata
+        imgdata = self.res3(imgdata)
+        imgdata = self.neck3(imgdata)
 
         # When in doubt, add more conv
         imgdata = self.convblock4(imgdata)
