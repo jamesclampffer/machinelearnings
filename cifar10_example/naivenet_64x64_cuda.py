@@ -110,7 +110,7 @@ class NaiveNet(torch.nn.Module):
 
         # Second conv and pool, reduce to 8px*8px, 32 channels
         self.convblock2 = SimpleConvBlock(32, 64, True)
-
+        self.res2 = SimpleResBlock(64)
         # A third conv layer, same input/output channels and map size
         self.convblock3 = SimpleConvBlock(64, 64, False)
         self.res3 = SimpleResBlock(64)
@@ -134,6 +134,7 @@ class NaiveNet(torch.nn.Module):
 
         # second convolution + pool
         imgdata = self.convblock2(imgdata)
+        imgdata = self.res2(imgdata)
 
         # third conv layer, no pool
         imgdata = self.convblock3(imgdata)
@@ -147,7 +148,6 @@ class NaiveNet(torch.nn.Module):
         imgdata = self.convblock5(imgdata)
 
         # print("Feature shape before flattening:", imgdata.shape)
-        # Linearize ahead of fully connected layer
 
         imgdata = self.pre_fc_dropout(imgdata)
         imgdata = torch.nn.functional.adaptive_avg_pool2d(imgdata, 1)
