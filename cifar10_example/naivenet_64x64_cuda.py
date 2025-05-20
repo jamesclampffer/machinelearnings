@@ -26,13 +26,14 @@ class SimpleResBlock(nn.Module):
         self.activation_fn = nn.ReLU()
         self.conv2 = nn.Conv2d(chan_io, chan_io, kernel_size=3, padding=1, bias=False)
         self.norm2 = nn.BatchNorm2d(chan_io)
-    
+
     def forward(self, x):
         initial = x
         layer1 = self.activation_fn(self.norm1(self.conv1(x)))
         layer2 = self.norm2(self.conv2(layer1))
         layer2 += initial
         return self.activation_fn(layer2)
+
 
 class SimpleBottleneck(nn.Module):
     def __init__(self, in_chan, out_chan, neck_chan):
@@ -67,6 +68,7 @@ class SimpleBottleneck(nn.Module):
 
 class SimpleConvBlock(nn.Module):
     """Stop repeating conv->norm->relu->pool"""
+
     def __init__(self, in_chan, out_chan, enable_pool, activation_fn=torch.relu):
         super(SimpleConvBlock, self).__init__()
         self.conv = nn.Conv2d(in_chan, out_chan, kernel_size=3, padding=1)
@@ -86,6 +88,7 @@ class SimpleConvBlock(nn.Module):
             x = self.pool(x)
         x = self.drop(x)
         return x
+
 
 # Using CIFAR10/CIFAR100 scaled up by some integer
 IMG_X = 64
@@ -133,7 +136,7 @@ class NaiveNet(torch.nn.Module):
         # third conv layer, no pool
         imgdata = self.convblock3(imgdata)
 
-        #res = imgdata
+        # res = imgdata
 
         # When in doubt, add more conv
         imgdata = self.convblock4(imgdata)
@@ -268,7 +271,7 @@ def main():
         )
 
         # Print acc on an interval, it's expensive to do every epoch
-        if (epoch+1) % STATS_INTERVAL == 0:
+        if (epoch + 1) % STATS_INTERVAL == 0:
             acc = check_acc(model, validation_loader, device)
             print("Epoch acc: {}".format(acc))
         else:
@@ -299,7 +302,9 @@ def check_acc(model, loader, device):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Simple nn")
-    p.add_argument("--cpu_num", type=int, default=6, help="Cores to dedicate to process")
+    p.add_argument(
+        "--cpu_num", type=int, default=6, help="Cores to dedicate to process"
+    )
     p.add_argument("--prefetch_factor", type=int, default=12)
     p.add_argument("--epochs", type=int, default=20)
     p.add_argument("--batch_size", type=int, default=128)
