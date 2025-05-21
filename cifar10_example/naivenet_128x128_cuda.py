@@ -126,14 +126,18 @@ class NaiveNet(torch.nn.Module):
         """Set up the operators this simple model will use"""
         super().__init__()
 
-        self.neck1 = SimpleBottleneck(3, 32, 64)
+        # Apply bottleneck-style block to expand channels without a ton of compute
+        self.neck1 = SimpleBottleneck(3, 16, 24)
+        # downsample, the image had been upsaled for interpolation in transforms
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.res1 = SimpleResBlock(32)
+        # Residual near the start seem to help, I assume due to not losing too much spatial info
+        self.res1 = SimpleResBlock(16)
 
-        # Second conv and pool, reduce to 8px*8px, 32 channels
-        self.convblock2 = SimpleConvBlock(32, 64, True)
+        # second stack of ops
+        self.convblock2 = SimpleConvBlock(16, 64, True)
         self.res2 = SimpleResBlock(64)
-        # A third conv layer, same input/output channels and map size
+        
+        # thirds stack
         self.convblock3 = SimpleConvBlock(64, 64, True)
         self.res3 = SimpleResBlock(64)
         self.neck3 = DepthwiseSeperableBottleneck(64,96,128)
@@ -141,7 +145,8 @@ class NaiveNet(torch.nn.Module):
         # Yet another conv layer
         self.convblock4 = SimpleConvBlock(96, 64, False)
         self.res4 = SimpleResBlock(64)
-        # A 4th conv layer
+
+        # Final before dropout to fc layer
         self.convblock5 = SimpleConvBlock(64, 32, True)
 
         # 8px * 8px * 32 chan -> 10 classes of objects
@@ -171,13 +176,12 @@ class NaiveNet(torch.nn.Module):
         # 4th conv layer, no pooling
         imgdata = self.convblock5(imgdata)
 
-        # print("Feature shape before flattening:", imgdata.shape)
-
         imgdata = self.pre_fc_dropout(imgdata)
         imgdata = torch.nn.functional.adaptive_avg_pool2d(imgdata, 1)
         imgdata = imgdata.view(imgdata.size(0), -1)
 
         if self.fc_classifier is None:
+            # todo: set this up in __init__, doing it here screws with model stats
             self.fc_classifier = nn.Linear(imgdata.size(1), 100).to(imgdata.device)
 
         return self.fc_classifier(imgdata)
@@ -345,6 +349,7 @@ if __name__ == "__main__":
     p.add_argument("--skip_layer", type=bool, default=False, help="currently ignored")
     args = p.parse_args()
 
+    # Assign options to globals..
     CPU_NUM = args.cpu_num
     PREFETCH_FACTOR = args.prefetch_factor
     EPOCHS = args.epochs
@@ -354,6 +359,7 @@ if __name__ == "__main__":
     STATS_INTERVAL = args.stats_interval
     SKIP_LAYER = args.skip_layer
 
+    # Derived constants
     INTEROP_THREADS = int(CPU_NUM / 1.5) if CPU_NUM > 2 else 1
 
     main()
