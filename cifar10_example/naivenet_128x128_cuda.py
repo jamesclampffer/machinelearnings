@@ -34,6 +34,7 @@ class SimpleResBlock(nn.Module):
         layer2 += initial
         return self.activation_fn(layer2)
 
+
 class DepthwiseSeperableBottleneck(nn.Module):
     def __init__(self, chan_in, chan_out, chan_core, fwd_res=True):
         super().__init__()
@@ -41,7 +42,9 @@ class DepthwiseSeperableBottleneck(nn.Module):
         self.norm_in = nn.BatchNorm2d(chan_core)
 
         # Channel count should be high here, so do a depthwise conv to keep things a little faster
-        self.coreconv = nn.Conv2d(chan_core, chan_core, kernel_size=3, stride=1, padding=1, groups=chan_core)
+        self.coreconv = nn.Conv2d(
+            chan_core, chan_core, kernel_size=3, stride=1, padding=1, groups=chan_core
+        )
         self.corenorm = nn.BatchNorm2d(chan_core)
 
         self.implode = nn.Conv2d(chan_core, chan_out, kernel_size=1)
@@ -50,12 +53,13 @@ class DepthwiseSeperableBottleneck(nn.Module):
         self.use_residual = chan_in == chan_out and fwd_res
 
     def forward(self, x):
-        out=torch.relu(self.norm_in(self.explode(x)))
+        out = torch.relu(self.norm_in(self.explode(x)))
         out = torch.relu(self.corenorm(self.coreconv(out)))
         out = self.norm_out(self.implode(out))
         if self.use_residual:
             out = out + x
         return torch.relu(out)
+
 
 class SimpleBottleneck(nn.Module):
     def __init__(self, in_chan, out_chan, neck_chan):
@@ -89,6 +93,7 @@ class SimpleBottleneck(nn.Module):
         return x
 
 
+# TODO: parameterize kernel size for downsampling
 class SimpleConvBlock(nn.Module):
     """Stop repeating conv->norm->relu->pool"""
 
@@ -136,11 +141,11 @@ class NaiveNet(torch.nn.Module):
         # second stack of ops
         self.convblock2 = SimpleConvBlock(16, 64, True)
         self.res2 = SimpleResBlock(64)
-        
+
         # thirds stack
         self.convblock3 = SimpleConvBlock(64, 64, True)
         self.res3 = SimpleResBlock(64)
-        self.neck3 = DepthwiseSeperableBottleneck(64,96,192)
+        self.neck3 = DepthwiseSeperableBottleneck(64, 96, 192)
 
         # Yet another conv layer
         self.convblock4 = SimpleConvBlock(96, 64, False)
@@ -148,12 +153,17 @@ class NaiveNet(torch.nn.Module):
 
         # Final before dropout to fc layer
         self.convblock5 = SimpleConvBlock(64, 32, True)
-
-        # 8px * 8px * 32 chan -> 10 classes of objects
         self.pre_fc_dropout = nn.Dropout(0.1)
-        self.fc_classifier = None
 
-    def forward(self, imgdata):
+        # Is there not a better way to do this?
+        with torch.no_grad():
+            dummy = torch.zeros(1, 3, IMG_Y, IMG_X)
+            dummy_out = self.fwd_logic(dummy)
+            flat_dim = dummy_out.view(1, -1).shape[1]
+            self.fc_classifier = nn.Linear(flat_dim, 100)
+
+    def fwd_logic(self, imgdata):
+        """Encapsulate forward() logic so it can be referenced in init"""
         # First convolution + rectification +  pool
         imgdata = self.neck1(imgdata)
         imgdata = self.pool1(imgdata)
@@ -172,19 +182,17 @@ class NaiveNet(torch.nn.Module):
         imgdata = self.convblock4(imgdata)
         imgdata = self.res4(imgdata)
 
-
         # 4th conv layer, no pooling
         imgdata = self.convblock5(imgdata)
 
         imgdata = self.pre_fc_dropout(imgdata)
         imgdata = torch.nn.functional.adaptive_avg_pool2d(imgdata, 1)
-        imgdata = imgdata.view(imgdata.size(0), -1)
+        return imgdata
 
-        if self.fc_classifier is None:
-            # todo: set this up in __init__, doing it here screws with model stats
-            self.fc_classifier = nn.Linear(imgdata.size(1), 100).to(imgdata.device)
-
-        return self.fc_classifier(imgdata)
+    def forward(self, imgdata):
+        out = self.fwd_logic(imgdata)
+        out = out.view(imgdata.size(0), -1)
+        return self.fc_classifier(out)
 
 
 # Command line params
@@ -268,9 +276,11 @@ def main():
 
     par_total = sum(p.numel() for p in model.parameters())
     par_train = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print("Arch data:\n\ttotal params: {}\n\ttrainable params: {}".format(par_total, par_train))
-
-
+    print(
+        "Arch data:\n\ttotal params: {}\n\ttrainable params: {}".format(
+            par_total, par_train
+        )
+    )
 
     # Ignore for now, required for training
     criterion = nn.CrossEntropyLoss()
@@ -351,7 +361,7 @@ if __name__ == "__main__":
         "--stats_interval",
         type=int,
         default=5,
-        help="Calculate accuracy every N epochs"
+        help="Calculate accuracy every N epochs",
     ),
     p.add_argument("--skip_layer", type=bool, default=False, help="currently ignored")
     args = p.parse_args()
