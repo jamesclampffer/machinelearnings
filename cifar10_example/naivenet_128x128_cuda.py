@@ -140,7 +140,7 @@ class NaiveNet(torch.nn.Module):
         # thirds stack
         self.convblock3 = SimpleConvBlock(64, 64, True)
         self.res3 = SimpleResBlock(64)
-        self.neck3 = DepthwiseSeperableBottleneck(64,96,128)
+        self.neck3 = DepthwiseSeperableBottleneck(64,96,192)
 
         # Yet another conv layer
         self.convblock4 = SimpleConvBlock(96, 64, False)
@@ -264,6 +264,13 @@ def main():
 
     # Stand up a model on the compute resource
     model = NaiveNet().to(device)
+    print("Loaded model")
+
+    par_total = sum(p.numel() for p in model.parameters())
+    par_train = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print("Arch data:\n\ttotal params: {}\n\ttrainable params: {}".format(par_total, par_train))
+
+
 
     # Ignore for now, required for training
     criterion = nn.CrossEntropyLoss()
@@ -272,7 +279,7 @@ def main():
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
-    # The whole training loop
+    # TODO: refactor now that I'm more familiar with the library
     for epoch in range(EPOCHS):
         """The training loop, run through the whole training set 10 times (epochs)"""
         print("Training epoch {} of {}".format(epoch + 1, EPOCHS))
