@@ -34,6 +34,28 @@ class SimpleResBlock(nn.Module):
         layer2 += initial
         return self.activation_fn(layer2)
 
+class DepthwiseSeperableBottleneck(nn.Module):
+    def __init__(self, chan_in, chan_out, chan_core, fwd_res=True):
+        super().__init__()
+        self.explode = nn.Conv2d(chan_in, chan_core, kernel_size=1)
+        self.norm_in = nn.BatchNorm2d(chan_core)
+
+        # Channel count should be high here, so do a depthwise conv to keep things a little faster
+        self.coreconv = nn.Conv2d(chan_core, chan_core, kernel_size=3, stride=1, padding=1, groups=chan_core)
+        self.corenorm = nn.BatchNorm2d(chan_core)
+
+        self.implode = nn.Conv2d(chan_core, chan_out, kernel_size=1)
+        self.norm_out = nn.BatchNorm2d(chan_out)
+
+        self.use_residual = chan_in == chan_out and fwd_res
+
+    def forward(self, x):
+        out=torch.relu(self.norm_in(self.explode(x)))
+        out = torch.relu(self.corenorm(self.coreconv(out)))
+        out = self.norm_out(self.implode(out))
+        if self.use_residual:
+            out = out + x
+        return torch.relu(out)
 
 class SimpleBottleneck(nn.Module):
     def __init__(self, in_chan, out_chan, neck_chan):
@@ -54,6 +76,7 @@ class SimpleBottleneck(nn.Module):
         self.implode_activate = nn.ReLU()
 
     def forward(self, x):
+        # Add a skiplayer option here?
         x = self.explode(x)
         x = self.explode_norm(x)
         x = self.explode_activate(x)
@@ -103,7 +126,6 @@ class NaiveNet(torch.nn.Module):
         """Set up the operators this simple model will use"""
         super().__init__()
 
-        # Convolution layers followed by 2x2->1x1 downsampling
         self.neck1 = SimpleBottleneck(3, 32, 64)
         self.pool1 = nn.MaxPool2d(2, 2)
         self.res1 = SimpleResBlock(32)
@@ -114,11 +136,11 @@ class NaiveNet(torch.nn.Module):
         # A third conv layer, same input/output channels and map size
         self.convblock3 = SimpleConvBlock(64, 64, True)
         self.res3 = SimpleResBlock(64)
-        self.neck3 = SimpleBottleneck(64,64,128)
+        self.neck3 = DepthwiseSeperableBottleneck(64,96,128)
 
         # Yet another conv layer
-        self.convblock4 = SimpleConvBlock(64, 64, False)
-
+        self.convblock4 = SimpleConvBlock(96, 64, False)
+        self.res4 = SimpleResBlock(64)
         # A 4th conv layer
         self.convblock5 = SimpleConvBlock(64, 32, True)
 
@@ -143,6 +165,8 @@ class NaiveNet(torch.nn.Module):
 
         # When in doubt, add more conv
         imgdata = self.convblock4(imgdata)
+        imgdata = self.res4(imgdata)
+
 
         # 4th conv layer, no pooling
         imgdata = self.convblock5(imgdata)
@@ -316,7 +340,7 @@ if __name__ == "__main__":
         "--stats_interval",
         type=int,
         default=5,
-        help="Calculate accuracy every N epochs",
+        help="Calculate accuracy every N epochs"
     ),
     p.add_argument("--skip_layer", type=bool, default=False, help="currently ignored")
     args = p.parse_args()
