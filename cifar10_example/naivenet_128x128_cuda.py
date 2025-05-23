@@ -58,7 +58,7 @@ class SimpleConvBlock(nn.Module):
         self.enable_pool = enable_pool
         if enable_pool:
             self.pool = nn.MaxPool2d(2, 2)
-        self.drop = nn.Dropout(0.05)
+        self.drop = nn.Dropout2d(0.05)
 
     def forward(self, x):
         x = self.conv(x)
@@ -208,7 +208,7 @@ class NaiveNet(torch.nn.Module):
         super().__init__()
 
         # expand channels without a ton of compute
-        self.neck1 = SimpleBottleneckBlock(3, 16, 24, activation_fn=nn.functional.silu, stride=2)
+        self.neck1 = SimpleBottleneckBlock(3, 16, 36, activation_fn=nn.functional.silu, stride=2)
 
         # initial feature detection, hang on to spatial data
         self.res1 = SimpleResidualBlock(16, activation_fn=nn.functional.silu)
@@ -242,7 +242,6 @@ class NaiveNet(torch.nn.Module):
         """Encapsulate forward() logic so it can be referenced in init"""
         # First convolution + rectification +  pool
         imgdata = self.neck1(imgdata)
-        imgdata = self.pool1(imgdata)
         imgdata = self.res1(imgdata)
 
         # second convolution + pool
@@ -288,7 +287,7 @@ def main():
         [
             torchvision.transforms.Resize((IMG_X, IMG_Y)),
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.RandomCrop(IMG_X, padding=4),  # Crop up to 4 pixels
+            torchvision.transforms.RandomCrop(IMG_X, padding=12),  # Crop up to 4 pixels
             torchvision.transforms.RandomHorizontalFlip(p=0.5),  # Flip the image
             # todo: add RandomAffine when dims > 128x128
             torchvision.transforms.ColorJitter(
@@ -352,7 +351,19 @@ def main():
     optimizer = torch.optim.SGD(
         model.parameters(), lr=INITIAL_LR, momentum=INITIAL_MOMENTUM, weight_decay=1e-4
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
+    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer,
+        max_lr=INITIAL_LR * 5,           # e.g. 0.05 if INITIAL_LR = 0.01
+        steps_per_epoch=len(training_loader),
+        epochs=EPOCHS,
+        pct_start=0.3,
+        div_factor=25,
+        final_div_factor=1e4,
+        anneal_strategy="cos"
+    )
+
+
 
     # The training loop
     for epoch in range(EPOCHS):
