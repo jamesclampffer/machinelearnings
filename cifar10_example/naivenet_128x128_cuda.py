@@ -104,7 +104,7 @@ class SqueezeExciteBlock(nn.Module):
 
 
 class SimpleBottleneckBlock(nn.Module):
-    def __init__(self, in_chan, out_chan, neck_chan, activation_fn=nn.functional.relu):
+    def __init__(self, in_chan, out_chan, neck_chan, activation_fn=nn.functional.relu, stride=1):
         super().__init__()
         self.explode_activate = activation_fn
         self.core_activate = activation_fn
@@ -114,7 +114,7 @@ class SimpleBottleneckBlock(nn.Module):
         self.explode = nn.Conv2d(in_chan, neck_chan, kernel_size=1, bias=False)
         self.explode_norm = nn.BatchNorm2d(neck_chan)
         # depthwise conv through expanded channels
-        self.core = nn.Conv2d(neck_chan, neck_chan, kernel_size=3, padding=1, bias=False)
+        self.core = nn.Conv2d(neck_chan, neck_chan, kernel_size=3, padding=1, bias=False, stride=stride)
         self.core_norm = nn.BatchNorm2d(neck_chan)
         # reduce channel count
         self.implode = nn.Conv2d(neck_chan, out_chan, kernel_size=1, bias=False)
@@ -140,7 +140,7 @@ class DepthwiseSeperableBottleneck(nn.Module):
     """Resnet50 style bottleneck with Xception's depthwise conv trick"""
 
     def __init__(
-        self, chan_in, chan_out, chan_core, activation_fn=nn.functional.relu, fwd_res=True
+        self, chan_in, chan_out, chan_core, activation_fn=nn.functional.relu, fwd_res=True, stride=1
     ):
         super().__init__()
         self.use_residual = chan_in == chan_out and fwd_res
@@ -151,7 +151,7 @@ class DepthwiseSeperableBottleneck(nn.Module):
 
         # Do a depthwise conv to keep things a little faster
         self.coreconv = nn.Conv2d(
-            chan_core, chan_core, kernel_size=3, stride=1, padding=1, groups=chan_core
+            chan_core, chan_core, kernel_size=3, stride=stride, padding=1, groups=chan_core
         )
         self.corenorm = nn.BatchNorm2d(chan_core)
 
@@ -208,9 +208,8 @@ class NaiveNet(torch.nn.Module):
         super().__init__()
 
         # expand channels without a ton of compute
-        self.neck1 = SimpleBottleneckBlock(3, 16, 24, activation_fn=nn.functional.silu)
-        # downsample, this was optimized for 32x32 cifar100
-        self.pool1 = nn.MaxPool2d(2, 2)
+        self.neck1 = SimpleBottleneckBlock(3, 16, 24, activation_fn=nn.functional.silu, stride=2)
+
         # initial feature detection, hang on to spatial data
         self.res1 = SimpleResidualBlock(16, activation_fn=nn.functional.silu)
 
@@ -220,7 +219,7 @@ class NaiveNet(torch.nn.Module):
         self.res2 = SimpleResidualBlock(64)
 
         # TBD: strided conv rather than pooling
-        self.convblock3 = SimpleConvBlock(64, 64, False, stride=2)
+        self.convblock3 = SimpleConvBlock(64, 64, False, stride=1)
         self.res3 = SimpleResidualBlock(64)
         self.neck3 = DepthwiseSeperableBottleneck(64, 96, 192)
 
