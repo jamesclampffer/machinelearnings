@@ -42,17 +42,18 @@ class SimpleConvBlock(nn.Module):
         in_chan,
         out_chan,
         enable_pool,
-        activation_fn=torch.relu,
+        activation_fn=nn.functional.relu,
         kernel_size=3,
         padding=1,
         stride=1,
     ):
         super(SimpleConvBlock, self).__init__()
+        self.activation_fn = activation_fn
+
         self.conv = nn.Conv2d(
             in_chan, out_chan, kernel_size=kernel_size, padding=padding, stride=stride
         )
         self.norm = nn.BatchNorm2d(out_chan)
-        self.activation_fn = activation_fn
 
         self.enable_pool = enable_pool
         if enable_pool:
@@ -72,11 +73,11 @@ class SimpleConvBlock(nn.Module):
 class SimpleResidualBlock(nn.Module):
     """Plain conv with residual block. Some of the other blocks defined below handle residuals as well, but do more things"""
 
-    def __init__(self, chan_io, activation_fn=nn.ReLU):
+    def __init__(self, chan_io, activation_fn=nn.functional.relu):
         super().__init__()
+        self.activation_fn = activation_fn
         self.conv1 = nn.Conv2d(chan_io, chan_io, kernel_size=3, padding=1, bias=False)
         self.norm1 = nn.BatchNorm2d(chan_io)
-        self.activation_fn = activation_fn()
         self.conv2 = nn.Conv2d(chan_io, chan_io, kernel_size=3, padding=1, bias=False)
         self.norm2 = nn.BatchNorm2d(chan_io)
 
@@ -87,24 +88,38 @@ class SimpleResidualBlock(nn.Module):
         layer2 += initial
         return self.activation_fn(layer2)
 
+class SqueezeExciteBlock(nn.Module):
+    """Aim attention at the most active channels for an input"""
+    def __init__(self, chan, ratio=4):
+        super().__init__()
+        self.proc = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(chan, chan//ratio, bias=False), nn.ReLU(inplace=True),
+            nn.Linear(chan//ratio, chan, bias=False), nn.Sigmoid()
+        )
+    def forward(self, x):
+        w = self.proc(x).view(x.size(0), x.size(1), 1, 1)
+        return x * w
+
 
 class SimpleBottleneckBlock(nn.Module):
-    def __init__(self, in_chan, out_chan, neck_chan, activation_fn=nn.ReLU):
+    def __init__(self, in_chan, out_chan, neck_chan, activation_fn=nn.functional.relu):
         super().__init__()
+        self.explode_activate = activation_fn
+        self.core_activate = activation_fn
+        self.implode_activate = activation_fn
+
         # expand channels TODO: sequential.Compose these
-        self.explode = nn.Conv2d(in_chan, neck_chan, kernel_size=1)
+        self.explode = nn.Conv2d(in_chan, neck_chan, kernel_size=1, bias=False)
         self.explode_norm = nn.BatchNorm2d(neck_chan)
-        self.explode_activate = activation_fn()
-
         # depthwise conv through expanded channels
-        self.core = nn.Conv2d(neck_chan, neck_chan, kernel_size=3, padding=1)
+        self.core = nn.Conv2d(neck_chan, neck_chan, kernel_size=3, padding=1, bias=False)
         self.core_norm = nn.BatchNorm2d(neck_chan)
-        self.core_activate = activation_fn()
-
         # reduce channel count
-        self.implode = nn.Conv2d(neck_chan, out_chan, kernel_size=1)
+        self.implode = nn.Conv2d(neck_chan, out_chan, kernel_size=1, bias=False)
         self.implode_norm = nn.BatchNorm2d(out_chan)
-        self.implode_activate = activation_fn()
+        self.chan_squeeze = SqueezeExciteBlock(out_chan)
 
     def forward(self, x):
         # Add a skiplayer option here?
@@ -117,6 +132,7 @@ class SimpleBottleneckBlock(nn.Module):
         x = self.implode(x)
         x = self.implode_norm(x)
         x = self.implode_activate(x)
+        x = self.chan_squeeze(x)
         return x
 
 
@@ -124,7 +140,7 @@ class DepthwiseSeperableBottleneck(nn.Module):
     """Resnet50 style bottleneck with Xception's depthwise conv trick"""
 
     def __init__(
-        self, chan_in, chan_out, chan_core, activation_fn=torch.relu, fwd_res=True
+        self, chan_in, chan_out, chan_core, activation_fn=nn.functional.relu, fwd_res=True
     ):
         super().__init__()
         self.use_residual = chan_in == chan_out and fwd_res
@@ -141,14 +157,17 @@ class DepthwiseSeperableBottleneck(nn.Module):
 
         self.implode = nn.Conv2d(chan_core, chan_out, kernel_size=1)
         self.norm_out = nn.BatchNorm2d(chan_out)
+        self.chan_squeeze = SqueezeExciteBlock(chan_out)
 
     def forward(self, x):
         out = self.activation_fn(self.norm_in(self.explode(x)))
         out = self.activation_fn(self.corenorm(self.coreconv(out)))
         out = self.norm_out(self.implode(out))
+        out = self.activation_fn(out)
+        out = self.chan_squeeze(out)
         if self.use_residual:
             out = out + x
-        return self.activation_fn(out)
+        return out
 
 
 # Define the "shape" of the network
@@ -189,14 +208,14 @@ class NaiveNet(torch.nn.Module):
         super().__init__()
 
         # expand channels without a ton of compute
-        self.neck1 = SimpleBottleneckBlock(3, 16, 24)
+        self.neck1 = SimpleBottleneckBlock(3, 16, 24, activation_fn=nn.functional.silu)
         # downsample, this was optimized for 32x32 cifar100
         self.pool1 = nn.MaxPool2d(2, 2)
         # initial feature detection, hang on to spatial data
-        self.res1 = SimpleResidualBlock(16)
+        self.res1 = SimpleResidualBlock(16, activation_fn=nn.functional.silu)
 
         # further fan out channels, with another 2x2-> pool
-        self.convblock2 = SimpleConvBlock(16, 64, True)
+        self.convblock2 = SimpleConvBlock(16, 64, False, stride=2, activation_fn=nn.functional.silu)
         # keep identifying smaller features, but keep spatial info
         self.res2 = SimpleResidualBlock(64)
 
