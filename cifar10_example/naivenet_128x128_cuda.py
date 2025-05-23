@@ -69,7 +69,7 @@ class SimpleConvBlock(nn.Module):
         return x
 
 
-class SimpleResBlock(nn.Module):
+class SimpleResidualBlock(nn.Module):
     """Plain conv with residual block. Some of the other blocks defined below handle residuals as well, but do more things"""
 
     def __init__(self, chan_io, activation_fn=nn.ReLU):
@@ -88,7 +88,7 @@ class SimpleResBlock(nn.Module):
         return self.activation_fn(layer2)
 
 
-class SimpleBottleneck(nn.Module):
+class SimpleBottleneckBlock(nn.Module):
     def __init__(self, in_chan, out_chan, neck_chan, activation_fn=nn.ReLU):
         super().__init__()
         # expand channels TODO: sequential.Compose these
@@ -133,7 +133,7 @@ class DepthwiseSeperableBottleneck(nn.Module):
         self.explode = nn.Conv2d(chan_in, chan_core, kernel_size=1)
         self.norm_in = nn.BatchNorm2d(chan_core)
 
-        # Channel count should be high here, so do a depthwise conv to keep things a little faster
+        # Do a depthwise conv to keep things a little faster
         self.coreconv = nn.Conv2d(
             chan_core, chan_core, kernel_size=3, stride=1, padding=1, groups=chan_core
         )
@@ -148,7 +148,7 @@ class DepthwiseSeperableBottleneck(nn.Module):
         out = self.norm_out(self.implode(out))
         if self.use_residual:
             out = out + x
-        return torch.relu(out)
+        return self.activation_fn(out)
 
 
 # Define the "shape" of the network
@@ -189,28 +189,28 @@ class NaiveNet(torch.nn.Module):
         super().__init__()
 
         # expand channels without a ton of compute
-        self.neck1 = SimpleBottleneck(3, 16, 24)
+        self.neck1 = SimpleBottleneckBlock(3, 16, 24)
         # downsample, this was optimized for 32x32 cifar100
         self.pool1 = nn.MaxPool2d(2, 2)
         # initial feature detection, hang on to spatial data
-        self.res1 = SimpleResBlock(16)
+        self.res1 = SimpleResidualBlock(16)
 
         # further fan out channels, with another 2x2-> pool
         self.convblock2 = SimpleConvBlock(16, 64, True)
         # keep identifying smaller features, but keep spatial info
-        self.res2 = SimpleResBlock(64)
+        self.res2 = SimpleResidualBlock(64)
 
         # TBD: strided conv rather than pooling
-        self.convblock3 = SimpleConvBlock(64, 64, True)
-        self.res3 = SimpleResBlock(64)
+        self.convblock3 = SimpleConvBlock(64, 64, False, stride=2)
+        self.res3 = SimpleResidualBlock(64)
         self.neck3 = DepthwiseSeperableBottleneck(64, 96, 192)
 
         # Conv layer to narrow channels.
         self.convblock4 = SimpleConvBlock(96, 64, False)
-        self.res4 = SimpleResBlock(64)
+        self.res4 = SimpleResidualBlock(64)
 
         # Further downsample depth map
-        self.convblock5 = SimpleConvBlock(64, 32, True)
+        self.convblock5 = SimpleConvBlock(64, 32, False, stride=2)
         self.pre_fc_dropout = nn.Dropout(0.1)
 
         # Gross. There has to be a smarter way to calculate this dim, right?
@@ -330,7 +330,7 @@ def main():
     )
 
     # Ignore for now, required for training
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = torch.optim.SGD(
         model.parameters(), lr=INITIAL_LR, momentum=INITIAL_MOMENTUM, weight_decay=1e-4
     )
