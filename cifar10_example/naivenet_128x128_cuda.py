@@ -42,7 +42,7 @@ class SimpleConvBlock(nn.Module):
         in_chan,
         out_chan,
         enable_pool,
-        activation_fn=nn.functional.relu,
+        activation_fn=nn.functional.silu,
         kernel_size=3,
         padding=1,
         stride=1,
@@ -53,7 +53,7 @@ class SimpleConvBlock(nn.Module):
         self.conv = nn.Conv2d(
             in_chan, out_chan, kernel_size=kernel_size, padding=padding, stride=stride
         )
-        self.norm = nn.BatchNorm2d(out_chan)
+        self.norm = nn.BatchNorm2d(out_chan, momentum=0.05)
 
         self.enable_pool = enable_pool
         if enable_pool:
@@ -73,13 +73,13 @@ class SimpleConvBlock(nn.Module):
 class SimpleResidualBlock(nn.Module):
     """Plain conv with residual block. Some of the other blocks defined below handle residuals as well, but do more things"""
 
-    def __init__(self, chan_io, activation_fn=nn.functional.relu):
+    def __init__(self, chan_io, activation_fn=nn.functional.silu):
         super().__init__()
         self.activation_fn = activation_fn
         self.conv1 = nn.Conv2d(chan_io, chan_io, kernel_size=3, padding=1, bias=False)
-        self.norm1 = nn.BatchNorm2d(chan_io)
+        self.norm1 = nn.BatchNorm2d(chan_io, momentum=0.05)
         self.conv2 = nn.Conv2d(chan_io, chan_io, kernel_size=3, padding=1, bias=False)
-        self.norm2 = nn.BatchNorm2d(chan_io)
+        self.norm2 = nn.BatchNorm2d(chan_io, momentum=0.05)
 
     def forward(self, x):
         initial = x
@@ -104,7 +104,7 @@ class SqueezeExciteBlock(nn.Module):
 
 
 class SimpleBottleneckBlock(nn.Module):
-    def __init__(self, in_chan, out_chan, neck_chan, activation_fn=nn.functional.relu, stride=1):
+    def __init__(self, in_chan, out_chan, neck_chan, activation_fn=nn.functional.silu, stride=1):
         super().__init__()
         self.explode_activate = activation_fn
         self.core_activate = activation_fn
@@ -112,13 +112,13 @@ class SimpleBottleneckBlock(nn.Module):
 
         # expand channels TODO: sequential.Compose these
         self.explode = nn.Conv2d(in_chan, neck_chan, kernel_size=1, bias=False)
-        self.explode_norm = nn.BatchNorm2d(neck_chan)
+        self.explode_norm = nn.BatchNorm2d(neck_chan, momentum=0.05)
         # depthwise conv through expanded channels
         self.core = nn.Conv2d(neck_chan, neck_chan, kernel_size=3, padding=1, bias=False, stride=stride)
-        self.core_norm = nn.BatchNorm2d(neck_chan)
+        self.core_norm = nn.BatchNorm2d(neck_chan, momentum=0.05)
         # reduce channel count
         self.implode = nn.Conv2d(neck_chan, out_chan, kernel_size=1, bias=False)
-        self.implode_norm = nn.BatchNorm2d(out_chan)
+        self.implode_norm = nn.BatchNorm2d(out_chan, momentum=0.05)
         self.chan_squeeze = SqueezeExciteBlock(out_chan)
 
     def forward(self, x):
@@ -140,30 +140,30 @@ class DepthwiseSeperableBottleneck(nn.Module):
     """Resnet50 style bottleneck with Xception's depthwise conv trick"""
 
     def __init__(
-        self, chan_in, chan_out, chan_core, activation_fn=nn.functional.relu, fwd_res=True, stride=1
+        self, chan_in, chan_out, chan_core, activation_fn=nn.functional.silu, fwd_res=True, stride=1
     ):
         super().__init__()
         self.use_residual = chan_in == chan_out and fwd_res
         self.activation_fn = activation_fn
 
-        self.explode = nn.Conv2d(chan_in, chan_core, kernel_size=1)
-        self.norm_in = nn.BatchNorm2d(chan_core)
+        self.explode = nn.Conv2d(chan_in, chan_core, kernel_size=1, bias=False)
+        self.norm_in = nn.BatchNorm2d(chan_core, momentum=0.05)
 
         # Do a depthwise conv to keep things a little faster
         self.coreconv = nn.Conv2d(
-            chan_core, chan_core, kernel_size=3, stride=stride, padding=1, groups=chan_core
+            chan_core, chan_core, kernel_size=3, stride=stride, padding=1, groups=chan_core, bias=False
         )
-        self.corenorm = nn.BatchNorm2d(chan_core)
+        self.corenorm = nn.BatchNorm2d(chan_core, momentum=0.05)
 
-        self.implode = nn.Conv2d(chan_core, chan_out, kernel_size=1)
-        self.norm_out = nn.BatchNorm2d(chan_out)
+        self.implode = nn.Conv2d(chan_core, chan_out, kernel_size=1, bias=False)
+        self.norm_out = nn.BatchNorm2d(chan_out, momentum=0.05)
         self.chan_squeeze = SqueezeExciteBlock(chan_out)
 
     def forward(self, x):
+
         out = self.activation_fn(self.norm_in(self.explode(x)))
         out = self.activation_fn(self.corenorm(self.coreconv(out)))
-        out = self.norm_out(self.implode(out))
-        out = self.activation_fn(out)
+        out = self.activation_fn(self.norm_out(self.implode(out)))
         out = self.chan_squeeze(out)
         if self.use_residual:
             out = out + x
@@ -287,7 +287,7 @@ def main():
         [
             torchvision.transforms.Resize((IMG_X, IMG_Y)),
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.RandomCrop(IMG_X, padding=12),  # Crop up to 4 pixels
+            torchvision.transforms.RandomCrop(IMG_X, padding=4),  # Crop up to 4 pixels
             torchvision.transforms.RandomHorizontalFlip(p=0.5),  # Flip the image
             # todo: add RandomAffine when dims > 128x128
             torchvision.transforms.ColorJitter(
@@ -383,9 +383,12 @@ def main():
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
+            if True:
+                scheduler.step()
 
             loss_acc += loss.item()
-        scheduler.step()
+        if False:
+            scheduler.step() # for cosine annealer that doesn't step every batch
 
         print(
             "Done training epoch {}/{}, loss for epoch: {}, lr: {}".format(
