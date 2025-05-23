@@ -16,6 +16,7 @@ import torch.optim.lr_scheduler
 import torchvision
 import torchvision.datasets
 import torchvision.transforms
+import torchinfo
 
 # Command line params for visibility here. Set in main()
 CPU_NUM = None
@@ -88,23 +89,30 @@ class SimpleResidualBlock(nn.Module):
         layer2 += initial
         return self.activation_fn(layer2)
 
+
 class SqueezeExciteBlock(nn.Module):
     """Aim attention at the most active channels for an input"""
+
     def __init__(self, chan, ratio=4):
         super().__init__()
         self.proc = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Flatten(),
-            nn.Linear(chan, chan//ratio, bias=False), nn.ReLU(inplace=True),
-            nn.Linear(chan//ratio, chan, bias=False), nn.Sigmoid()
+            nn.Linear(chan, chan // ratio, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(chan // ratio, chan, bias=False),
+            nn.Sigmoid(),
         )
+
     def forward(self, x):
         w = self.proc(x).view(x.size(0), x.size(1), 1, 1)
         return x * w
 
 
 class SimpleBottleneckBlock(nn.Module):
-    def __init__(self, in_chan, out_chan, neck_chan, activation_fn=nn.functional.silu, stride=1):
+    def __init__(
+        self, in_chan, out_chan, neck_chan, activation_fn=nn.functional.silu, stride=1
+    ):
         super().__init__()
         self.explode_activate = activation_fn
         self.core_activate = activation_fn
@@ -114,7 +122,9 @@ class SimpleBottleneckBlock(nn.Module):
         self.explode = nn.Conv2d(in_chan, neck_chan, kernel_size=1, bias=False)
         self.explode_norm = nn.BatchNorm2d(neck_chan, momentum=0.05)
         # depthwise conv through expanded channels
-        self.core = nn.Conv2d(neck_chan, neck_chan, kernel_size=3, padding=1, bias=False, stride=stride)
+        self.core = nn.Conv2d(
+            neck_chan, neck_chan, kernel_size=3, padding=1, bias=False, stride=stride
+        )
         self.core_norm = nn.BatchNorm2d(neck_chan, momentum=0.05)
         # reduce channel count
         self.implode = nn.Conv2d(neck_chan, out_chan, kernel_size=1, bias=False)
@@ -140,7 +150,13 @@ class DepthwiseSeperableBottleneck(nn.Module):
     """Resnet50 style bottleneck with Xception's depthwise conv trick"""
 
     def __init__(
-        self, chan_in, chan_out, chan_core, activation_fn=nn.functional.silu, fwd_res=True, stride=1
+        self,
+        chan_in,
+        chan_out,
+        chan_core,
+        activation_fn=nn.functional.silu,
+        fwd_res=True,
+        stride=1,
     ):
         super().__init__()
         self.use_residual = chan_in == chan_out and fwd_res
@@ -151,7 +167,13 @@ class DepthwiseSeperableBottleneck(nn.Module):
 
         # Do a depthwise conv to keep things a little faster
         self.coreconv = nn.Conv2d(
-            chan_core, chan_core, kernel_size=3, stride=stride, padding=1, groups=chan_core, bias=False
+            chan_core,
+            chan_core,
+            kernel_size=3,
+            stride=stride,
+            padding=1,
+            groups=chan_core,
+            bias=False,
         )
         self.corenorm = nn.BatchNorm2d(chan_core, momentum=0.05)
 
@@ -208,13 +230,17 @@ class NaiveNet(torch.nn.Module):
         super().__init__()
 
         # expand channels without a ton of compute
-        self.neck1 = SimpleBottleneckBlock(3, 16, 36, activation_fn=nn.functional.silu, stride=2)
+        self.neck1 = SimpleBottleneckBlock(
+            3, 16, 36, activation_fn=nn.functional.silu, stride=2
+        )
 
         # initial feature detection, hang on to spatial data
         self.res1 = SimpleResidualBlock(16, activation_fn=nn.functional.silu)
 
         # further fan out channels, with another 2x2-> pool
-        self.convblock2 = SimpleConvBlock(16, 64, False, stride=2, activation_fn=nn.functional.silu)
+        self.convblock2 = SimpleConvBlock(
+            16, 64, False, stride=2, activation_fn=nn.functional.silu
+        )
         # keep identifying smaller features, but keep spatial info
         self.res2 = SimpleResidualBlock(64)
 
@@ -289,7 +315,7 @@ def main():
             torchvision.transforms.ToTensor(),
             torchvision.transforms.RandomCrop(IMG_X, padding=4),  # Crop up to 4 pixels
             torchvision.transforms.RandomHorizontalFlip(p=0.5),  # Flip the image
-            # todo: add RandomAffine when dims > 128x128
+            torchvision.transforms.RandomAffine(degrees=10, shear=5),
             torchvision.transforms.ColorJitter(
                 0.1, 0.1, 0.1, 0.02
             ),  # Fuzz colors and brightness
@@ -341,8 +367,15 @@ def main():
     par_total = sum(p.numel() for p in model.parameters())
     par_train = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(
-        "Arch data:\n\ttotal params: {}\n\ttrainable params: {}".format(
+        "Arch data (prior to training):\n\ttotal params: {}\n\ttrainable params: {}".format(
             par_total, par_train
+        )
+    )
+    print(
+        torchinfo.summary(
+            model,
+            input_size=(1, 3, 128, 128),
+            col_names=("input_size", "output_size", "num_params"),
         )
     )
 
@@ -351,19 +384,17 @@ def main():
     optimizer = torch.optim.SGD(
         model.parameters(), lr=INITIAL_LR, momentum=INITIAL_MOMENTUM, weight_decay=1e-4
     )
-    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer,
-        max_lr=INITIAL_LR * 5,           # e.g. 0.05 if INITIAL_LR = 0.01
+        max_lr=INITIAL_LR * 5,  # e.g. 0.05 if INITIAL_LR = 0.01
         steps_per_epoch=len(training_loader),
         epochs=EPOCHS,
         pct_start=0.3,
         div_factor=25,
         final_div_factor=1e4,
-        anneal_strategy="cos"
+        anneal_strategy="cos",
     )
-
-
 
     # The training loop
     for epoch in range(EPOCHS):
@@ -388,7 +419,7 @@ def main():
 
             loss_acc += loss.item()
         if False:
-            scheduler.step() # for cosine annealer that doesn't step every batch
+            scheduler.step()  # for cosine annealer that doesn't step every batch
 
         print(
             "Done training epoch {}/{}, loss for epoch: {}, lr: {}".format(
