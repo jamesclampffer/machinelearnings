@@ -17,7 +17,7 @@ import torchvision
 import torchvision.datasets
 import torchvision.transforms
 
-# Command line params
+# Command line params for visibility here. Set in main()
 CPU_NUM = None
 PREFETCH_FACTOR = None
 EPOCHS = None
@@ -27,13 +27,30 @@ INITIAL_MOMENTUM = None
 STATS_INTERVAL = None
 INTEROP_THREADS = None
 
+# Upscaled img size. Some integer multiple of 32. Extra pixels give training
+# data augmentation transforms room to interpolate using a more granular
+# representation; try a rotation at 32x32 and you're gonna have a bad time.
+IMG_X = 128
+IMG_Y = 128
+
 
 class SimpleConvBlock(nn.Module):
-    """Stop repeating conv->norm->relu->pool"""
+    """Conv with optional skip-layer"""
 
-    def __init__(self, in_chan, out_chan, enable_pool, activation_fn=torch.relu):
+    def __init__(
+        self,
+        in_chan,
+        out_chan,
+        enable_pool,
+        activation_fn=torch.relu,
+        kernel_size=3,
+        padding=1,
+        stride=1,
+    ):
         super(SimpleConvBlock, self).__init__()
-        self.conv = nn.Conv2d(in_chan, out_chan, kernel_size=3, padding=1)
+        self.conv = nn.Conv2d(
+            in_chan, out_chan, kernel_size=kernel_size, padding=padding, stride=stride
+        )
         self.norm = nn.BatchNorm2d(out_chan)
         self.activation_fn = activation_fn
 
@@ -134,11 +151,6 @@ class DepthwiseSeperableBottleneck(nn.Module):
         return torch.relu(out)
 
 
-# Using CIFAR10/CIFAR100 scaled up by some integer
-IMG_X = 128
-IMG_Y = 128
-
-
 # Define the "shape" of the network
 class NaiveNet(torch.nn.Module):
     """
@@ -197,11 +209,11 @@ class NaiveNet(torch.nn.Module):
         self.convblock4 = SimpleConvBlock(96, 64, False)
         self.res4 = SimpleResBlock(64)
 
-        # Further narrow
+        # Further downsample depth map
         self.convblock5 = SimpleConvBlock(64, 32, True)
         self.pre_fc_dropout = nn.Dropout(0.1)
 
-        # Gross. Is there not a better way to do this?
+        # Gross. There has to be a smarter way to calculate this dim, right?
         with torch.no_grad():
             dummy = torch.zeros(1, 3, IMG_Y, IMG_X)
             dummy_out = self.fwd_logic(dummy)
@@ -324,9 +336,8 @@ def main():
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
-    # TODO: refactor now that I'm more familiar with the library
+    # The training loop
     for epoch in range(EPOCHS):
-        """The training loop, run through the whole training set 10 times (epochs)"""
         print("Training epoch {} of {}".format(epoch + 1, EPOCHS))
         model.train()
         loss_acc = 0
@@ -334,7 +345,8 @@ def main():
             images, labels = images.to(device), labels.to(device)
 
             optimizer.zero_grad()
-            # The syntax here changes with versions
+            # Note: fixing the depricated warning breaks a test environment
+            # due to the change not being implemented on that pytorch version.
             with torch.cuda.amp.autocast(enabled=enable_cuda_amp):
                 outputs = model(images)
                 loss = criterion(outputs, labels)
@@ -353,15 +365,15 @@ def main():
         )
 
         # Print acc on an interval, it's expensive to do every epoch
-        if (epoch + 1) % STATS_INTERVAL == 0:
+        if (epoch + 1) % STATS_INTERVAL == 0 and epoch != 0:
             acc = check_acc(model, validation_loader, device)
-            print("Epoch acc: {}".format(acc))
+            print("Epoch {} acc: {}".format(epoch, acc))
         else:
             print("Skipping test check for epoch {}".format(epoch))
 
-    # Check accuracy against data the model has not seen
-    num = check_acc(model, validation_loader, device)
-    print("Overall test accuracy: {}".format(num))
+    # This isn't tracking the best acc, just the last one
+    finalacc = check_acc(model, validation_loader, device)
+    print("Overall validation test accuracy: {}".format(finalacc))
 
 
 def check_acc(model, loader, device):
@@ -383,15 +395,25 @@ def check_acc(model, loader, device):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser(description="Simple nn")
+    p = argparse.ArgumentParser(description="Simple nn training loop")
+    p.add_argument("--cpu_num", type=int, default=6, help="CPU cores to use.")
     p.add_argument(
-        "--cpu_num", type=int, default=6, help="Cores to dedicate to process"
+        "--prefetch_factor",
+        type=int,
+        default=12,
+        help="Lower to reduce memory consumption, raise if gpu is starved",
     )
-    p.add_argument("--prefetch_factor", type=int, default=12)
-    p.add_argument("--epochs", type=int, default=20)
+    p.add_argument("--epochs", type=int, default=20, help="Training epochs to execute")
     p.add_argument("--batch_size", type=int, default=128)
-    p.add_argument("--initial_lr", type=float, default=0.01)
-    p.add_argument("--initial_momentum", type=float, default=0.9)
+    p.add_argument(
+        "--initial_lr", type=float, default=0.01, help="Initial learning rate"
+    )
+    p.add_argument(
+        "--initial_momentum",
+        type=float,
+        default=0.9,
+        help="Not applicable to all optimizers",
+    )
     p.add_argument(
         "--stats_interval",
         type=int,
