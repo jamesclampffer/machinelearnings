@@ -27,6 +27,7 @@ INITIAL_LR = None
 INITIAL_MOMENTUM = None
 STATS_INTERVAL = None
 INTEROP_THREADS = None
+SCALE_CHAN = None
 
 # Upscaled img size. Some integer multiple of 32. Extra pixels give training
 # data augmentation transforms room to interpolate using a more granular
@@ -34,6 +35,10 @@ INTEROP_THREADS = None
 IMG_X = 128
 IMG_Y = 128
 
+def scale_chan(ch):
+    """Scale nominal channel count to experement with model size"""
+    global SCALE_CHAN
+    return int(ch/SCALE_CHAN) if ch > 8 else ch
 
 class SimpleConvBlock(nn.Module):
     """Conv with optional skip-layer"""
@@ -42,7 +47,6 @@ class SimpleConvBlock(nn.Module):
         self,
         in_chan,
         out_chan,
-        enable_pool,
         activation_fn=nn.functional.silu,
         kernel_size=3,
         padding=1,
@@ -50,24 +54,22 @@ class SimpleConvBlock(nn.Module):
     ):
         super(SimpleConvBlock, self).__init__()
         self.activation_fn = activation_fn
+        self.use_residual = in_chan == out_chan and stride == 1
 
         self.conv = nn.Conv2d(
-            in_chan, out_chan, kernel_size=kernel_size, padding=padding, stride=stride
+            scale_chan(in_chan), scale_chan(out_chan), kernel_size=kernel_size, padding=padding, stride=stride
         )
         self.norm = nn.BatchNorm2d(out_chan, momentum=0.05)
-
-        self.enable_pool = enable_pool
-        if enable_pool:
-            self.pool = nn.MaxPool2d(2, 2)
         self.drop = nn.Dropout2d(0.05)
 
     def forward(self, x):
+        i = x
         x = self.conv(x)
         x = self.norm(x)
         x = self.activation_fn(x)
-        if self.enable_pool:
-            x = self.pool(x)
         x = self.drop(x)
+        if self.use_residual:
+            x = x + i 
         return x
 
 
@@ -77,10 +79,12 @@ class SimpleResidualBlock(nn.Module):
     def __init__(self, chan_io, activation_fn=nn.functional.silu):
         super().__init__()
         self.activation_fn = activation_fn
-        self.conv1 = nn.Conv2d(chan_io, chan_io, kernel_size=3, padding=1, bias=False)
-        self.norm1 = nn.BatchNorm2d(chan_io, momentum=0.05)
-        self.conv2 = nn.Conv2d(chan_io, chan_io, kernel_size=3, padding=1, bias=False)
-        self.norm2 = nn.BatchNorm2d(chan_io, momentum=0.05)
+
+        ch = scale_chan(chan_io)
+        self.conv1 = nn.Conv2d(ch, ch, kernel_size=3, padding=1, bias=False)
+        self.norm1 = nn.BatchNorm2d(ch, momentum=0.05)
+        self.conv2 = nn.Conv2d(ch, ch, kernel_size=3, padding=1, bias=False)
+        self.norm2 = nn.BatchNorm2d(ch, momentum=0.05)
 
     def forward(self, x):
         initial = x
@@ -95,6 +99,7 @@ class SqueezeExciteBlock(nn.Module):
 
     def __init__(self, chan, ratio=4):
         super().__init__()
+        chan = scale_chan(chan)
         self.proc = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Flatten(),
@@ -110,6 +115,7 @@ class SqueezeExciteBlock(nn.Module):
 
 
 class SimpleBottleneckBlock(nn.Module):
+    #__slots__ = 'chan_in', 'chan_out', 'chan_core', 'activation_fn', 'stride'
     def __init__(
         self, in_chan, out_chan, neck_chan, activation_fn=nn.functional.silu, stride=1
     ):
@@ -118,18 +124,22 @@ class SimpleBottleneckBlock(nn.Module):
         self.core_activate = activation_fn
         self.implode_activate = activation_fn
 
+        ch_in = scale_chan(in_chan)
+        ch_out = scale_chan(out_chan)
+        ch_neck = scale_chan(neck_chan)
+
         # expand channels TODO: sequential.Compose these
-        self.explode = nn.Conv2d(in_chan, neck_chan, kernel_size=1, bias=False)
-        self.explode_norm = nn.BatchNorm2d(neck_chan, momentum=0.05)
+        self.explode = nn.Conv2d(ch_in, ch_neck, kernel_size=1, bias=False)
+        self.explode_norm = nn.BatchNorm2d(ch_neck, momentum=0.05)
         # depthwise conv through expanded channels
         self.core = nn.Conv2d(
-            neck_chan, neck_chan, kernel_size=3, padding=1, bias=False, stride=stride
+            ch_neck, ch_neck, kernel_size=3, padding=1, bias=False, stride=stride
         )
-        self.core_norm = nn.BatchNorm2d(neck_chan, momentum=0.05)
+        self.core_norm = nn.BatchNorm2d(ch_neck, momentum=0.05)
         # reduce channel count
-        self.implode = nn.Conv2d(neck_chan, out_chan, kernel_size=1, bias=False)
-        self.implode_norm = nn.BatchNorm2d(out_chan, momentum=0.05)
-        self.chan_squeeze = SqueezeExciteBlock(out_chan)
+        self.implode = nn.Conv2d(ch_neck, ch_out, kernel_size=1, bias=False)
+        self.implode_norm = nn.BatchNorm2d(ch_out, momentum=0.05)
+        self.chan_squeeze = SqueezeExciteBlock(ch_out)
 
     def forward(self, x):
         # Add a skiplayer option here?
@@ -149,6 +159,7 @@ class SimpleBottleneckBlock(nn.Module):
 class DepthwiseSeperableBottleneck(nn.Module):
     """Resnet50 style bottleneck with Xception's depthwise conv trick"""
 
+    __slots__ = 'chan_in', 'chan_out', 'chan_core', 'use_residual', 'activation_fn'
     def __init__(
         self,
         chan_in,
@@ -159,30 +170,33 @@ class DepthwiseSeperableBottleneck(nn.Module):
         stride=1,
     ):
         super().__init__()
+        ch_in = scale_chan(chan_in)
+        ch_out = scale_chan(chan_out)
+        ch_core = scale_chan(chan_core)
+
         self.use_residual = chan_in == chan_out and fwd_res
         self.activation_fn = activation_fn
 
-        self.explode = nn.Conv2d(chan_in, chan_core, kernel_size=1, bias=False)
-        self.norm_in = nn.BatchNorm2d(chan_core, momentum=0.05)
+        self.explode = nn.Conv2d(ch_in, ch_core, kernel_size=1, bias=False)
+        self.norm_in = nn.BatchNorm2d(ch_core, momentum=0.05)
 
         # Do a depthwise conv to keep things a little faster
         self.coreconv = nn.Conv2d(
-            chan_core,
-            chan_core,
+            ch_core,
+            ch_core,
             kernel_size=3,
             stride=stride,
             padding=1,
-            groups=chan_core,
+            groups=ch_core,
             bias=False,
         )
-        self.corenorm = nn.BatchNorm2d(chan_core, momentum=0.05)
+        self.corenorm = nn.BatchNorm2d(ch_core, momentum=0.05)
 
-        self.implode = nn.Conv2d(chan_core, chan_out, kernel_size=1, bias=False)
-        self.norm_out = nn.BatchNorm2d(chan_out, momentum=0.05)
-        self.chan_squeeze = SqueezeExciteBlock(chan_out)
+        self.implode = nn.Conv2d(ch_core, ch_out, kernel_size=1, bias=False)
+        self.norm_out = nn.BatchNorm2d(ch_out, momentum=0.05)
+        self.chan_squeeze = SqueezeExciteBlock(ch_out)
 
     def forward(self, x):
-
         out = self.activation_fn(self.norm_in(self.explode(x)))
         out = self.activation_fn(self.corenorm(self.coreconv(out)))
         out = self.activation_fn(self.norm_out(self.implode(out)))
@@ -191,6 +205,33 @@ class DepthwiseSeperableBottleneck(nn.Module):
             out = out + x
         return out
 
+
+class QuickConvBlock(nn.Module):
+    """
+    Depthwise grouping on conv followed by pointwise. Same goals and tradeoffs as
+    the DepthwiseSeperableBottleneck efficiency trick; just without the bottleneck
+    part.
+    """
+    __slots__ = 'chan_in', 'chan_out', 'kernel_size', 'stride', 'activation_fn'
+    def __init__(self, chan_in, chan_out, kernel_size=3, stride=1, activation_fn=nn.functional.silu):
+        super().__init__()
+        self.use_residual = chan_in == chan_out and stride == 1
+        ch_in = scale_chan(chan_in)
+        ch_out = scale_chan(chan_out)
+
+        self.activation_fn = activation_fn
+        self.sep_layer_conv = nn.Conv2d(ch_in, ch_in, kernel_size=kernel_size, stride=stride, padding=kernel_size//2, groups=ch_in, bias=False)
+        self.map_point_conv = nn.Conv2d(ch_in, ch_out, kernel_size=1, stride=1, padding=0, bias=False)        
+        self.norm = nn.BatchNorm2d(ch_out, momentum=0.05)
+
+    def forward(self, featuremap):
+        i = featuremap
+        featuremap = self.activation_fn(self.sep_layer_conv(featuremap))
+        featuremap = self.activation_fn(self.norm(self.map_point_conv(featuremap)))
+
+        if self.use_residual:
+            featuremap = featuremap + i
+        return featuremap
 
 # Define the "shape" of the network
 class NaiveNet(torch.nn.Module):
@@ -239,22 +280,22 @@ class NaiveNet(torch.nn.Module):
 
         # further fan out channels, with another 2x2-> pool
         self.convblock2 = SimpleConvBlock(
-            16, 64, False, stride=2, activation_fn=nn.functional.silu
+            16, 64, stride=2, activation_fn=nn.functional.silu
         )
         # keep identifying smaller features, but keep spatial info
         self.res2 = SimpleResidualBlock(64)
 
         # TBD: strided conv rather than pooling
-        self.convblock3 = SimpleConvBlock(64, 64, False, stride=1)
+        self.convblock3 = QuickConvBlock(64, 64, stride=1)
         self.res3 = SimpleResidualBlock(64)
         self.neck3 = DepthwiseSeperableBottleneck(64, 96, 192)
 
         # Conv layer to narrow channels.
-        self.convblock4 = SimpleConvBlock(96, 64, False)
+        self.convblock4 = QuickConvBlock(96, 64)
         self.res4 = SimpleResidualBlock(64)
 
         # Further downsample depth map
-        self.convblock5 = SimpleConvBlock(64, 32, False, stride=2)
+        self.convblock5 = SimpleConvBlock(64, 32, stride=2)
         self.pre_fc_dropout = nn.Dropout(0.1)
 
         # Gross. There has to be a smarter way to calculate this dim, right?
@@ -483,7 +524,7 @@ if __name__ == "__main__":
         default=5,
         help="Calculate accuracy every N epochs",
     ),
-    p.add_argument("--skip_layer", type=bool, default=False, help="currently ignored")
+    p.add_argument("--scale_chan", type=float, default=1.0, help="Multiplier for channel count")
     args = p.parse_args()
 
     # Assign options to globals..
@@ -494,6 +535,7 @@ if __name__ == "__main__":
     INITIAL_LR = args.initial_lr
     INITIAL_MOMENTUM = args.initial_momentum
     STATS_INTERVAL = args.stats_interval
+    SCALE_CHAN= args.scale_chan
 
     # Derived constants
     INTEROP_THREADS = int(CPU_NUM / 1.5) if CPU_NUM > 2 else 1
