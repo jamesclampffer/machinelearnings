@@ -35,10 +35,12 @@ SCALE_CHAN = None
 IMG_X = 128
 IMG_Y = 128
 
+
 def scale_chan(ch):
     """Scale nominal channel count to experement with model size"""
     global SCALE_CHAN
-    return int(ch/SCALE_CHAN) if ch > 8 else ch
+    return int(ch / SCALE_CHAN) if ch > 8 else ch
+
 
 class SimpleConvBlock(nn.Module):
     """Conv with optional skip-layer"""
@@ -57,7 +59,11 @@ class SimpleConvBlock(nn.Module):
         self.use_residual = in_chan == out_chan and stride == 1
 
         self.conv = nn.Conv2d(
-            scale_chan(in_chan), scale_chan(out_chan), kernel_size=kernel_size, padding=padding, stride=stride
+            scale_chan(in_chan),
+            scale_chan(out_chan),
+            kernel_size=kernel_size,
+            padding=padding,
+            stride=stride,
         )
         self.norm = nn.BatchNorm2d(out_chan, momentum=0.05)
         self.drop = nn.Dropout2d(0.05)
@@ -69,7 +75,7 @@ class SimpleConvBlock(nn.Module):
         x = self.activation_fn(x)
         x = self.drop(x)
         if self.use_residual:
-            x = x + i 
+            x = x + i
         return x
 
 
@@ -115,7 +121,7 @@ class SqueezeExciteBlock(nn.Module):
 
 
 class SimpleBottleneckBlock(nn.Module):
-    #__slots__ = 'chan_in', 'chan_out', 'chan_core', 'activation_fn', 'stride'
+    # __slots__ = 'chan_in', 'chan_out', 'chan_core', 'activation_fn', 'stride'
     def __init__(
         self, in_chan, out_chan, neck_chan, activation_fn=nn.functional.silu, stride=1
     ):
@@ -159,7 +165,8 @@ class SimpleBottleneckBlock(nn.Module):
 class DepthwiseSeperableBottleneck(nn.Module):
     """Resnet50 style bottleneck with Xception's depthwise conv trick"""
 
-    __slots__ = 'chan_in', 'chan_out', 'chan_core', 'use_residual', 'activation_fn'
+    __slots__ = "chan_in", "chan_out", "chan_core", "use_residual", "activation_fn"
+
     def __init__(
         self,
         chan_in,
@@ -212,16 +219,35 @@ class QuickConvBlock(nn.Module):
     the DepthwiseSeperableBottleneck efficiency trick; just without the bottleneck
     part.
     """
-    __slots__ = 'chan_in', 'chan_out', 'kernel_size', 'stride', 'activation_fn'
-    def __init__(self, chan_in, chan_out, kernel_size=3, stride=1, activation_fn=nn.functional.silu):
+
+    __slots__ = "chan_in", "chan_out", "kernel_size", "stride", "activation_fn"
+
+    def __init__(
+        self,
+        chan_in,
+        chan_out,
+        kernel_size=3,
+        stride=1,
+        activation_fn=nn.functional.silu,
+    ):
         super().__init__()
         self.use_residual = chan_in == chan_out and stride == 1
         ch_in = scale_chan(chan_in)
         ch_out = scale_chan(chan_out)
 
         self.activation_fn = activation_fn
-        self.sep_layer_conv = nn.Conv2d(ch_in, ch_in, kernel_size=kernel_size, stride=stride, padding=kernel_size//2, groups=ch_in, bias=False)
-        self.map_point_conv = nn.Conv2d(ch_in, ch_out, kernel_size=1, stride=1, padding=0, bias=False)        
+        self.sep_layer_conv = nn.Conv2d(
+            ch_in,
+            ch_in,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=kernel_size // 2,
+            groups=ch_in,
+            bias=False,
+        )
+        self.map_point_conv = nn.Conv2d(
+            ch_in, ch_out, kernel_size=1, stride=1, padding=0, bias=False
+        )
         self.norm = nn.BatchNorm2d(ch_out, momentum=0.05)
 
     def forward(self, featuremap):
@@ -233,20 +259,19 @@ class QuickConvBlock(nn.Module):
             featuremap = featuremap + i
         return featuremap
 
+
 # Define the "shape" of the network
 class NaiveNet(torch.nn.Module):
     """
     A very simple cobbled together architecture.
     Optimized for CIFAR100, or ar least 32x32px input
 
-    My intent to improve training by upscaleing low-res 32x32 cifar
-    in order to augment training data. At 32x32 xforms other than
-    pixel translation e.g. rotation, shear will be extremely lossy.
-    This approach scales it up to 128x128 (int multiple of 32) such
-    that it's still small and fast. Spatial granularity allows more
-    training augmentation transforms. It'd be interesting to see how
-    well this generalizes to larger, or less upscaled, input during
-    inference after being trained on tiny images.
+    My intent to improve training by upscaling low-res 32x32 cifar; at 32x32
+    affine transforms will destroy lots of information. Here the inputs are
+    taken as 128x128 (no interpolation from 32x32) which provides better
+    spatial granularity. It'd be interesting to see how well this generalizes
+    to larger, or less upscaled, input during inference after being trained
+    on tiny images.
 
     The downside of this approach is the extra compute required to
     deal with images > 32x32. I did not want to increase training
@@ -257,13 +282,7 @@ class NaiveNet(torch.nn.Module):
     - depthwise seperable conv on maps with many channels
     - sprinking conv layers around generally helps, esp if already
       want to change channel count.
-
-    Data flow, roughly
-        Bottleneck>MaxPool2x2->Conv
-        Repeated conv+res block pairs while fattening channels
-        DepthwiseDeperableBottleneck->less params/runtime
-        Repeated conv+res block pairs while flatting channels
-        Conv->Flatten->FC
+    - Squeeze-Excite blocks for channel attention
     """
 
     def __init__(self):
@@ -524,7 +543,9 @@ if __name__ == "__main__":
         default=5,
         help="Calculate accuracy every N epochs",
     ),
-    p.add_argument("--scale_chan", type=float, default=1.0, help="Multiplier for channel count")
+    p.add_argument(
+        "--scale_chan", type=float, default=1.0, help="Multiplier for channel count"
+    )
     args = p.parse_args()
 
     # Assign options to globals..
@@ -535,7 +556,7 @@ if __name__ == "__main__":
     INITIAL_LR = args.initial_lr
     INITIAL_MOMENTUM = args.initial_momentum
     STATS_INTERVAL = args.stats_interval
-    SCALE_CHAN= args.scale_chan
+    SCALE_CHAN = args.scale_chan
 
     # Derived constants
     INTEROP_THREADS = int(CPU_NUM / 1.5) if CPU_NUM > 2 else 1
