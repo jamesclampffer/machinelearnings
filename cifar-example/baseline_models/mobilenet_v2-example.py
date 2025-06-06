@@ -1,11 +1,9 @@
-import time
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-from torchvision.models import resnet18
+from torchvision.models import mobilenet_v2
 from torch.utils.data import DataLoader
 
 
