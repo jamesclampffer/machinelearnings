@@ -1,18 +1,32 @@
+# James Clampffer 2025
+"""Download and preprocess text into chunks for embedding generation."""
+
+# You'll see the term "chunk" used as a quantity of text. This is to avoid
+# getting hung up on a sentence, paragraph, list item, or whatever else might
+# be a useful unit of text.
+
 import requests
 import io
-from typing import Iterator, Optional
+import typing
+import uuid
+
+# Forcing myself to use full module paths most of the time to burn them
+# into memory. There's a limit to how many times I'm willing to retype
+# the full module path.
+Iterator = typing.Iterator
+Optional = typing.Optional
 
 
 class GutenbergTextReader:
     """
-    A class to fetch and read Project Gutenberg texts by paragaph.
-    Intended for generating experemental data for text embeddings.
+    A class to fetch and read a Project Gutenberg text an by that
+    provides an iterator that chunks by ~paragraph.
     """
 
     __slots__ = ("url", "_text_content")
 
     def __init__(self, url: str):
-        self.url = url
+        self.url: str = url
         self._text_content: Optional[str] = None
         self._fetch_text()
 
@@ -56,12 +70,8 @@ class GutenbergTextReader:
     def read_chunks(self) -> Iterator[str]:
         """
         Return paragraphs-level chunks as strings. This is what the embeddings
-        will be built on.
+        will be built on. A flag to chunk on sentences would be nice.
         """
-        # Later it'd be interesting to include some peripheral
-        # text and see if that changes much. Likewise with different types of
-        # writing.
-
         data = io.StringIO(self._text_content)
 
         buf = []
@@ -101,16 +111,15 @@ def get_chosen_texts() -> list[str]:
     @brief Return a list of URLs for texts to be used in experiments.
     """
     # Book sources:
-    # A range of topics, and extra depth/overlap in specific areas to
-    # see what clusting looks like with real data. For example I expect
-    # embeddings from the transcendentalist texts to nearby in latent
+    # A handful of topics, and extra depth/overlap in specific areas to
+    # see what clusting looks like with real data.
     #
-    # I expect something like math to produce a distinct set of clusters:
-    # the contents, voice(s) used in delivery, and delivery format are
-    # distinct.
+    # I expect something like math to produce a distinct set of clusters
+    # from short stories for example. The contents, voice(s) used in
+    # delivery, and delivery format are all different.
     #
     # Expected Clusters:
-    # - Transcendentalism:
+    # - Transcendentalist stuff
     #   - Emerson, Thoreau, Hawthorne etc
     #
     # - Children's literature, surreal fiction
@@ -120,8 +129,10 @@ def get_chosen_texts() -> list[str]:
     # - forestry info <- nature, sustainability-> transcendentalism
     # - Shackleton's expedition <- individualism, expidition -> transcendentalism
     # - The scarlet letter <- boston, timeframe -> Walden
-
-    return [
+    minitest = [
+        "https://www.gutenberg.org/cache/epub/11/pg11.txt"
+    ]  # Alice's Adventures in Wonderland
+    fullsrc = [
         "https://www.gutenberg.org/cache/epub/11/pg11.txt",  # Alice's Adventures in Wonderland
         "https://www.gutenberg.org/cache/epub/5200/pg5200.txt",  # The Metamorphosis, Kafka
         "https://www.gutenberg.org/cache/epub/7849/pg7849.txt",  # The Trial, Kafka
@@ -134,6 +145,7 @@ def get_chosen_texts() -> list[str]:
         "https://www.gutenberg.org/cache/epub/48874/pg48874.txt",  # A brief history of forestry
         "https://www.gutenberg.org/cache/epub/5199/pg5199.txt",  # South, the Story of Shackleton's Last Expedition
     ]
+    return minitest
 
 
 def main():
@@ -141,7 +153,7 @@ def main():
     Example usage of the GutenbergTextReader class.
     """
 
-    urls = get_chosen_texts
+    urls = get_chosen_texts()
 
     # Create reader instance
     chunk_count = 0
