@@ -172,7 +172,6 @@ class ModelTrainer:
         try:
             for epoch in range(self.start_epoch, self.epochs):
                 total_loss = 0
-                #for batch in [item for item in self.dataloader]:
                 for batch in self.dataloader:
                     inputs, targets = batch
                     if isinstance(inputs, (list, tuple)):
@@ -180,11 +179,9 @@ class ModelTrainer:
                     else:
                         inputs = inputs.to(self.device, non_blocking=True)
                     targets = targets.to(self.device, non_blocking=True)
+
                     self.model.train()
-
                     self.optimizer.zero_grad()
-                    
-
                     with autocast(enabled=self.use_amp):
                         outputs = self.model(inputs)
                         loss = self.loss_fn(outputs, targets)
