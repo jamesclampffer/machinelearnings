@@ -16,11 +16,10 @@ class DepthwiseSeparableConvBlock(nn.Module):
     place of a typical 3x3xc.
     """
 
-    __slots__ = ("depthwise", "pointwise", "bn", "drop", "activation")
+    __slots__ = ("depthwise", "pointwise", "bn", "activation")
     depthwise: nn.Conv2d
     pointwise: nn.Conv2d
     bn: nn.BatchNorm2d
-    drop: nn.Dropout
     activation: nn.Module
 
     def __init__(
@@ -28,18 +27,16 @@ class DepthwiseSeparableConvBlock(nn.Module):
     ):
         super().__init__()
         self.depthwise = nn.Conv2d(
-            chin, chin, kernel_size=3, stride=stride, padding=1, groups=chin
+            chin, chin, kernel_size=3, stride=stride, padding=1, groups=chin, bias=False
         )
-        self.pointwise = nn.Conv2d(chin, chout, kernel_size=1)
+        self.pointwise = nn.Conv2d(chin, chout, kernel_size=1, bias=False)
         self.bn = nn.BatchNorm2d(chout)
-        self.drop = nn.Dropout(0.05)
         self.activation = activation()
 
     def forward(self, fmap):
         fmap = self.depthwise(fmap)
         fmap = self.pointwise(fmap)
         fmap = self.bn(fmap)
-        fmap = self.drop(fmap)
         fmap = self.activation(fmap)
         return fmap
 
@@ -58,12 +55,10 @@ class MiniResBlock(nn.Module):
         "use_projection",
         "activation_fn",
         "downscale",
-        "projection",
     )
     seq: nn.Module
     use_residual: bool
     reduce: bool
-    use_projection: bool
     activation_fn: nn.Module
     downscale: nn.Module
     projection: nn.Module
@@ -85,7 +80,6 @@ class MiniResBlock(nn.Module):
 
         self.reduce = reduce
         self.use_residual = chan_in == chan_out
-        self.use_projection = not self.use_residual
         self.downscale = nn.AvgPool2d(kernel_size=2, stride=2)
         self.projection = nn.Sequential(
             nn.Conv2d(
@@ -97,8 +91,6 @@ class MiniResBlock(nn.Module):
     def forward(self, fmap):
         identity = fmap
         fmap = self.seq(fmap)
-
-        assert self.use_projection != self.use_residual
 
         # Add the skip back
         if self.use_residual:
@@ -117,7 +109,13 @@ class MiniNet(nn.Module):
     Shallow resnet-like architecture for image classification.
     """
 
-    __slots__ = "seq", "num_classes", "activation_fn", "squeeze_factor"
+    __slots__ = "seq", "stem", "num_classes", "activation_fn", "squeeze_factor", 
+    seq: nn.Module
+    stem: nn.Module
+    activation_fn: nn.Module
+    num_classes: int
+    squeeze_factor: int
+
 
     def __init__(self, num_classes, ch, activation_fn=nn.SiLU, squeeze_factor=10):
         super().__init__()
@@ -125,8 +123,16 @@ class MiniNet(nn.Module):
         self.squeeze_factor = squeeze_factor
         squeeze = lambda ch: int(ch / float(squeeze_factor))
 
+        self.stem = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=5, stride=1, padding=2, bias=False),
+            nn.BatchNorm2d(32),
+            nn.ReLU()
+        )
+
         self.seq = nn.Sequential(
-            MiniResBlock(ch, 64, reduce=True, activation=activation_fn),
+
+            MiniResBlock(3, 64, activation=nn.ReLU),
+            MiniResBlock(64, 64, activation=activation_fn),
             SqueezeExcitation(64, squeeze(64)),
             MiniResBlock(64, 64, reduce=True, activation=activation_fn),
             SqueezeExcitation(64, squeeze(64)),
@@ -139,12 +145,14 @@ class MiniNet(nn.Module):
             MiniResBlock(256, 256, activation=activation_fn),
             # Classifier
             nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Dropout(0.25),
             nn.Flatten(),
             nn.Linear(256, num_classes),
         )
 
-    @torch.jit.export
+    #@torch.jit.export
     def forward_pass(self, fmap):
+        #fmap = self.stem(fmap)
         return self.seq(fmap)
 
     def forward(self, fmap):
