@@ -1,22 +1,17 @@
-#Jim Clampffer 2025
+# Jim Clampffer 2025
 """
 Modularized training utilities as well as training loop.
 """
-
-import torch
-import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data.distributed import DistributedSampler
-from torch.optim.lr_scheduler import OneCycleLR
-
-from torch.utils.data import DataLoader
-from torch.cuda.amp import autocast, GradScaler
 import itertools
 
+import torch
+from torch.cuda.amp import autocast, GradScaler
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.optim.lr_scheduler import OneCycleLR
+from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
 import torchvision.transforms as transforms
-
-# Assume more compute resources if true.
-SERVER = True
 
 
 def get_basic_augmentation(X_DIM=224, Y_DIM=224):
@@ -45,16 +40,15 @@ def get_basic_augmentation(X_DIM=224, Y_DIM=224):
                 (X_DIM, Y_DIM)
             ),  # Really need to pull this from the dataset.
             transforms.RandomHorizontalFlip(p=0.5),
-        ] + affine + [
+        ]
+        + affine
+        + [
             transforms.ColorJitter(
                 brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05
             ),
             transforms.ToTensor(),
             transforms.RandomErasing(
-                p=0.5,
-                scale=(0.02, 0.1),
-                ratio=(0.3, 3.3),
-                value=0
+                p=0.5, scale=(0.02, 0.1), ratio=(0.3, 3.3), value=0
             ),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
@@ -62,6 +56,8 @@ def get_basic_augmentation(X_DIM=224, Y_DIM=224):
 
 
 class ModelTrainer:
+    """Manage the training loop and model state"""
+
     __slots__ = (
         "device",
         "model",
@@ -76,6 +72,7 @@ class ModelTrainer:
         "dataloader",
         "validateloader",
         "start_epoch",
+        "platform_info",
     )
 
     def __init__(
@@ -84,19 +81,19 @@ class ModelTrainer:
         loss_fn,
         dataset,
         epochs,
+        platform_info,
         initial_lr=0.01,
         batch_size=128,
         optimizer_cls=torch.optim.AdamW,
         checkpoint_path=None,
-        pretrained_path=None,
-        num_workers=16 if SERVER else 4,
     ):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.platform_info = platform_info
+        self.device = "cuda" if platform_info._cuda_enabled == True else "cpu"
         self.model = model.to(self.device)
 
         executor_count = torch.cuda.device_count()
         if executor_count > 1:
-            # untested
+            # untested, ganked from older project
             dist.init_process_group(
                 backend="nccl", init_method="env://", world_size=executor_count, rank=0
             )
@@ -107,13 +104,13 @@ class ModelTrainer:
                 dataset.train_set,
                 batch_size=batch_size,
                 sampler=sampler,
-                num_workers=num_workers,
+                num_workers=self.platform_info.hw_threads // 4 + 1,
             )
             self.validateloader = DataLoader(
                 dataset.val_set,
                 batch_size=batch_size,
                 shuffle=False,
-                num_workers=num_workers,
+                num_workers=self.platform_info.hw_threads // 4 + 1,
             )
             self.model = DDP(self.model, device_ids=[0], output_device=0)
         else:
@@ -138,30 +135,8 @@ class ModelTrainer:
         self.scaler = GradScaler(enabled=self.use_amp)
         self.start_epoch = 0
 
-        if pretrained_path:
-            self._load_checkpoint(pretrained_path)
-
     def _save_checkpoint(self, epoch):
-        if not self.checkpoint_path:
-            return
-        state = {
-            "epoch": epoch,
-            "model_state": self.model.state_dict(),
-            "optimizer_state": self.optimizer.state_dict(),
-            "scaler_state": self.scaler.state_dict() if self.use_amp else None,
-            "scheduler_state": self.scheduler.state_dict() if self.scheduler else None,
-        }
-        torch.save(state, self.checkpoint_path)
-
-    def _load_checkpoint(self, path):
-        checkpoint = torch.load(path, map_location=self.device)
-        self.model.load_state_dict(checkpoint["model_state"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state"])
-        if self.use_amp and checkpoint.get("scaler_state"):
-            self.scaler.load_state_dict(checkpoint["scaler_state"])
-        if self.scheduler and checkpoint.get("scheduler_state"):
-            self.scheduler.load_state_dict(checkpoint["scheduler_state"])
-        self.start_epoch = checkpoint.get("epoch", 0) + 1
+        torch.save(self.model, "model-epoch{}.pth".format(epoch))
 
     def train(self):
         per_batch_scheduler = isinstance(
@@ -189,8 +164,8 @@ class ModelTrainer:
 
                         total_loss += loss.item() * inputs.size(0)
 
-                        if self.use_amp and torch.cuda.is_available():
-                            # Keep gradients sane
+                        if self.use_amp or not torch.cuda.is_available():
+                            # Keep gradients sane on CPU and mixed precision GPU
                             self.scaler.unscale_(self.optimizer)
                             torch.nn.utils.clip_grad_norm_(
                                 self.model.parameters(), max_norm=1.0
@@ -204,16 +179,18 @@ class ModelTrainer:
                 if self.scheduler and not per_batch_scheduler:
                     self.scheduler.step()
 
-                self._save_checkpoint("ep{}.pth".format(epoch))
+                self._save_checkpoint(epoch)
                 normalized_loss = total_loss / len(self.dataloader.dataset)
                 print("epoch {} loss = {}".format(epoch, normalized_loss))
                 # avoid cost of full validation every epoch
-                self._validate(0.1 if epoch % 10 != 0 else 1.0, "epoch {}".format(epoch))
+                self._validate(
+                    0.1 if epoch % 10 != 0 else 1.0, "epoch {}".format(epoch)
+                )
         except KeyboardInterrupt:
             print("Training interrupted. Saving checkpoint...")
             self._save_checkpoint(epoch)
         except Exception as e:
-            print("An error occurred during training: {e}".format(e))
+            print("An error occurred during training: {}".format(e))
             self._save_checkpoint(epoch)
             raise
 
