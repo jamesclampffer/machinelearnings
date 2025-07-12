@@ -190,7 +190,7 @@ class ModelTrainer:
             print("Training interrupted. Saving checkpoint...")
             self._save_checkpoint(epoch)
         except Exception as e:
-            print("An error occurred during training: {e}".format(e))
+            print("An error occurred during training: {}".format(e))
             self._save_checkpoint(epoch)
             raise
 

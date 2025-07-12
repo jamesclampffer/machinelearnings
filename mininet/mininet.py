@@ -96,23 +96,26 @@ class MiniNet(nn.Module):
     Shallow resnet-like architecture for image classification.
     """
 
-    __slots__ = "seq", "num_classes", "activation_fn"
+    __slots__ = "seq", "num_classes", "activation_fn", "squeeze_factor"
 
-    def __init__(self, num_classes, ch, activation_fn=nn.SiLU):
+    def __init__(self, num_classes, ch, activation_fn=nn.SiLU, squeeze_factor=10):
         super().__init__()
         self.num_classes = num_classes
-        squeeze_ratio = 4
+        self.squeeze_factor = squeeze_factor
+        squeeze = lambda ch : int(ch/float(squeeze_factor))
+
         self.seq = nn.Sequential(
-            MiniResBlock(ch, 64, activation=activation_fn),
+            MiniResBlock(ch, 64, reduce=True, activation=activation_fn),
+            SqueezeExcitation(64, squeeze(64)),
             MiniResBlock(64, 64, reduce=True, activation=activation_fn),
-            SqueezeExcitation(64, 64 // squeeze_ratio),
-            MiniResBlock(64, 128, activation=activation_fn),
-            SqueezeExcitation(128, 128 // squeeze_ratio),
-            MiniResBlock(128, 128, reduce=True, activation=activation_fn),
-            SqueezeExcitation(128, 128 // squeeze_ratio),
+            SqueezeExcitation(64, squeeze(64)),
+            MiniResBlock(64, 128, reduce=True, activation=activation_fn),
+            SqueezeExcitation(128, squeeze(128)),
             MiniResBlock(128, 256, activation=activation_fn),
-            SqueezeExcitation(256, 256 // squeeze_ratio),
-            MiniResBlock(256, 256, reduce=True, activation=activation_fn),
+            SqueezeExcitation(256, squeeze(128)),
+            MiniResBlock(256, 256, activation=activation_fn),
+            SqueezeExcitation(256, squeeze(256)),
+            MiniResBlock(256, 256, activation=activation_fn),
             # Classifier
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),

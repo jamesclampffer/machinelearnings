@@ -56,7 +56,7 @@ def get_cli_args(parser: argparse.ArgumentParser):
         "--batch_size",
         type=int,
         default=256,
-        choices=[64,126,256,512,1024,2048],
+        choices=[64,128,256,512,1024,2048],
         help="number of samples to process per pass",
     )
     
@@ -76,9 +76,16 @@ def get_cli_args(parser: argparse.ArgumentParser):
             "silu", "swish",
             "gelu",
             "mish",
-            "serf"
+            #"serf"
         ],
         help="activation function - applies to whole model for now",
+    )
+
+    parser.add_argument(
+        "--squeeze_factor",
+        type=int,
+        default=8,
+        choices=[i for i in range(16)],
     )
 
     parser.add_argument(
@@ -90,17 +97,7 @@ def get_cli_args(parser: argparse.ArgumentParser):
     # fmt: on
     return parser.parse_args()
 
-
 def resolve_activation_name(name: str) -> nn.Module:
-    # move this elsewhere!
-    class SERF(nn.Module):
-        def __init__(self):
-            super().__init__()
-
-        @torch.jit.script
-        def forward(self, x: torch.Tensor) -> torch.Tensor:
-            return x * torch.tanh(torch.log1p(torch.exp(x)))
-
     activation_map = {
         "relu": nn.ReLU,
         # relu bounded 0..6
@@ -114,8 +111,7 @@ def resolve_activation_name(name: str) -> nn.Module:
         "gelu": nn.GELU,
         # smooth, self regulating, good gradient flow
         "mish": nn.Mish,
-        # The cool new thing.
-        "serf": SERF,
+        # todo: SERF
     }
     return activation_map[name.lower()]
 
@@ -143,6 +139,7 @@ if __name__ == "__main__":
             dataset.num_classes,
             dataset.img_channels,
             resolve_activation_name(args.activation),
+            squeeze_factor=args.squeeze_factor
         )
 
     # todo: make configurable
