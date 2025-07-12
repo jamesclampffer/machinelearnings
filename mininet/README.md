@@ -84,6 +84,21 @@ The code is intended to be easy to modify. Over-parameterizing adds unnecessary 
 
 ---
 
+## Some Results
+
+  | Dataset  | Epochs | Initial LR | Activation | Batch | Train time | Accuracy |
+  |----------|--------|------------|------------|-------|------------|----------|
+  | CIFAR10  |        |            |            |       |            |          |  
+  | CIFAR100 |        |            |            |       |            |          |  
+  | FOOD101  |        |            |            |       |            |          |  
+
+---
+## Limitations
+
+- Checkpointing logic saves model only; other state is not restored.
+- DDP path was copied from an older project without testing. More there as a motivator to address multi-gpu.
+---
+
 ## Roadmap
 
 - Support more datasets selectable by CLI flags
