@@ -47,11 +47,26 @@ class DepthwiseSeparableConvBlock(nn.Module):
 class MiniResBlock(nn.Module):
     """Residual block with two depthwise separable convolutions and a skip"""
 
-    __slots__ = "seq", "use_residual", "activation_fn", "downscale"
+    # Residuals passed across strided convolutions get downsampled using
+    # pooling rather than a convolution - lighter weight. 1x1 conv to handle
+    # channel mismatches
+
+    __slots__ = (
+        "seq",
+        "use_residual",
+        "reduce",
+        "use_projection",
+        "activation_fn",
+        "downscale",
+        "projection",
+    )
     seq: nn.Module
     use_residual: bool
+    reduce: bool
+    use_projection: bool
     activation_fn: nn.Module
     downscale: nn.Module
+    projection: nn.Module
 
     def __init__(
         self,
@@ -67,25 +82,31 @@ class MiniResBlock(nn.Module):
             ),
             DepthwiseSeparableConvBlock(chan_out, chan_out),
         )
-        # need to add some convs to handle channel mismatch
-        if chan_in == chan_out:
-            self.use_residual = True
-            if reduce:
-                # Downsample spacially to match convolution stride
-                self.downscale = nn.AvgPool2d(kernel_size=2, stride=2)
-            else:
-                self.downscale = None
-        else:
-            self.use_residual = False
-            self.downscale = None
+
+        self.reduce = reduce
+        self.use_residual = chan_in == chan_out
+        self.use_projection = not self.use_residual
+        self.downscale = nn.AvgPool2d(kernel_size=2, stride=2)
+        self.projection = nn.Sequential(
+            nn.Conv2d(
+                chan_in, chan_out, kernel_size=1, stride=2 if reduce else 1, bias=False
+            ),
+            nn.BatchNorm2d(chan_out),
+        )
 
     def forward(self, fmap):
         identity = fmap
         fmap = self.seq(fmap)
 
+        assert self.use_projection != self.use_residual
+
+        # Add the skip back
         if self.use_residual:
-            if self.downscale is not None:
+            if self.reduce:
                 identity = self.downscale(identity)
+            fmap = fmap + identity
+        else:
+            identity = self.projection(identity)
             fmap = fmap + identity
 
         return fmap
@@ -102,7 +123,7 @@ class MiniNet(nn.Module):
         super().__init__()
         self.num_classes = num_classes
         self.squeeze_factor = squeeze_factor
-        squeeze = lambda ch : int(ch/float(squeeze_factor))
+        squeeze = lambda ch: int(ch / float(squeeze_factor))
 
         self.seq = nn.Sequential(
             MiniResBlock(ch, 64, reduce=True, activation=activation_fn),
@@ -112,7 +133,7 @@ class MiniNet(nn.Module):
             MiniResBlock(64, 128, reduce=True, activation=activation_fn),
             SqueezeExcitation(128, squeeze(128)),
             MiniResBlock(128, 256, activation=activation_fn),
-            SqueezeExcitation(256, squeeze(128)),
+            SqueezeExcitation(256, squeeze(256)),
             MiniResBlock(256, 256, activation=activation_fn),
             SqueezeExcitation(256, squeeze(256)),
             MiniResBlock(256, 256, activation=activation_fn),
