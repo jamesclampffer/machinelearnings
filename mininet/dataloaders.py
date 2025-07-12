@@ -30,6 +30,7 @@ class MultiDatasetLoader:
     dataset_name: str
     _batch_size: int
     download: bool
+    _num_classes: int
 
     def __init__(
         self,
@@ -93,7 +94,7 @@ class MultiDatasetLoader:
     def get_transform(self):
         return self.transform
 
-    def get_train_loader(self):
+    def get_train_loader(self) -> DataLoader:
         return DataLoader(
             self.train_set,
             batch_size=self.batch_size,
@@ -104,7 +105,7 @@ class MultiDatasetLoader:
             num_workers=self._resource_man.hw_threads // 4 + 1,
         )
 
-    def get_val_loader(self):
+    def get_val_loader(self) -> DataLoader:
         return DataLoader(
             self.val_set,
             batch_size=self.batch_size,
@@ -122,7 +123,7 @@ class MultiDatasetLoader:
     def __next__(self):
         return next(self._train_loader_iter)
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Batches in set."""
         return len(self.get_train_loader())
 

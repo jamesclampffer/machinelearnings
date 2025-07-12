@@ -30,7 +30,7 @@ def get_basic_augmentation(X_DIM=224, Y_DIM=224):
     if enable_affine:
         affine.append(
             transforms.RandomAffine(
-                degrees=15, translate=(0.15, 0.15), scale=(0.85, 1.1), shear=10
+                degrees=8, translate=(0.15, 0.15), scale=(0.85, 1.1), shear=10
             )
         )
 
@@ -44,7 +44,7 @@ def get_basic_augmentation(X_DIM=224, Y_DIM=224):
         + affine
         + [
             transforms.ColorJitter(
-                brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05
+                brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05
             ),
             transforms.ToTensor(),
             transforms.RandomErasing(
@@ -126,9 +126,11 @@ class ModelTrainer:
             self.optimizer,
             max_lr=initial_lr,
             total_steps=self.epochs * steps_per_epoch,
-            pct_start=0.1,
+            pct_start=0.3,
+            div_factor=20,
             anneal_strategy="cos",
             cycle_momentum=False,
+            final_div_factor=10e4
         )
         self.checkpoint_path = checkpoint_path
         self.use_amp = self.device.startswith("cuda")
@@ -137,6 +139,10 @@ class ModelTrainer:
 
     def _save_checkpoint(self, epoch):
         torch.save(self.model, "model-epoch{}.pth".format(epoch))
+        # quick check
+        total_params = sum(p.numel() for p in self.model.parameters())
+        trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        print("total params: {}, trainable params: {}".format(total_params, trainable_params))
 
     def train(self):
         per_batch_scheduler = isinstance(
@@ -186,6 +192,8 @@ class ModelTrainer:
                 self._validate(
                     0.1 if epoch % 10 != 0 else 1.0, "epoch {}".format(epoch)
                 )
+                print("current learning rate: ".format(self.optimizer.param_groups[0]['lr']))
+
         except KeyboardInterrupt:
             print("Training interrupted. Saving checkpoint...")
             self._save_checkpoint(epoch)
