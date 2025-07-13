@@ -30,7 +30,7 @@ def get_basic_augmentation(X_DIM=224, Y_DIM=224):
     if enable_affine:
         affine.append(
             transforms.RandomAffine(
-                degrees=15, translate=(0.15, 0.15), scale=(0.85, 1.1), shear=10
+                degrees=8, translate=(0.15, 0.15), scale=(0.85, 1.1), shear=10
             )
         )
 
@@ -44,7 +44,7 @@ def get_basic_augmentation(X_DIM=224, Y_DIM=224):
         + affine
         + [
             transforms.ColorJitter(
-                brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05
+                brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05
             ),
             transforms.ToTensor(),
             transforms.RandomErasing(
@@ -130,7 +130,7 @@ class ModelTrainer:
             div_factor=20,
             anneal_strategy="cos",
             cycle_momentum=False,
-            final_div_factor=0.0001
+            final_div_factor=10e4
         )
         self.checkpoint_path = checkpoint_path
         self.use_amp = self.device.startswith("cuda")

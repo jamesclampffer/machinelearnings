@@ -75,7 +75,7 @@ class MiniResBlock(nn.Module):
             DepthwiseSeparableConvBlock(
                 chan_in, chan_out, stride=2 if reduce else 1, activation=activation
             ),
-            DepthwiseSeparableConvBlock(chan_out, chan_out),
+            DepthwiseSeparableConvBlock(chan_out, chan_out, activation=activation),
         )
 
         self.reduce = reduce
@@ -121,6 +121,7 @@ class MiniNet(nn.Module):
         super().__init__()
         self.num_classes = num_classes
         self.squeeze_factor = squeeze_factor
+        self.activation_fn = activation_fn
         squeeze = lambda ch: int(ch / float(squeeze_factor))
 
         self.stem = nn.Sequential(
@@ -134,7 +135,7 @@ class MiniNet(nn.Module):
         )
 
         self.seq = nn.Sequential(
-            MiniResBlock(32, 64, activation=activation_fn),
+            MiniResBlock(32, 64, reduce=False),
             SqueezeExcitation(64, squeeze(64)),
             MiniResBlock(64, 64, reduce=True, activation=activation_fn),
             SqueezeExcitation(64, squeeze(64)),
@@ -152,7 +153,7 @@ class MiniNet(nn.Module):
             nn.Linear(256, num_classes),
         )
 
-    #@torch.jit.export
+    @torch.jit.export
     def forward_pass(self, fmap):
         fmap = self.stem(fmap)
         return self.seq(fmap)
