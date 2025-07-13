@@ -93,26 +93,8 @@ class ModelTrainer:
 
         executor_count = torch.cuda.device_count()
         if executor_count > 1:
-            # untested, ganked from older project
-            dist.init_process_group(
-                backend="nccl", init_method="env://", world_size=executor_count, rank=0
-            )
-            sampler = DistributedSampler(
-                dataset.train_set, num_replicas=executor_count, rank=0
-            )
-            self.dataloader = DataLoader(
-                dataset.train_set,
-                batch_size=batch_size,
-                sampler=sampler,
-                num_workers=self.platform_info.hw_threads // 4 + 1,
-            )
-            self.validateloader = DataLoader(
-                dataset.val_set,
-                batch_size=batch_size,
-                shuffle=False,
-                num_workers=self.platform_info.hw_threads // 4 + 1,
-            )
-            self.model = DDP(self.model, device_ids=[0], output_device=0)
+            assert False, "not implemented"
+            # scale up, not out for short term
         else:
             self.dataloader = dataset.get_train_loader()
             self.validateloader = dataset.get_val_loader()
