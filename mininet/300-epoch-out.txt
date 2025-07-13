@@ -1,0 +1,1046 @@
+
+machinelearnings/mininet$ python main.py --dataset=food101 --batch_size=512 --squeeze_factor=8 --activation=mish --initial_lr=0.001 --epochs=300
+... terminal history cutoff ... 
+epoch 39 loss = 2.660373927975645
+epoch 39 validation (≈2560 samples): 45.31%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 40 loss = 2.61967977876317
+epoch 40 validation (≈25250 samples): 46.92%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 41 loss = 2.5793406045743734
+epoch 41 validation (≈2560 samples): 38.36%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 42 loss = 2.555836215626682
+epoch 42 validation (≈2560 samples): 31.64%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 43 loss = 2.5268831639116747
+epoch 43 validation (≈2560 samples): 45.98%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 44 loss = 2.4995889621457645
+epoch 44 validation (≈2560 samples): 50.51%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 45 loss = 2.472388438737825
+epoch 45 validation (≈2560 samples): 41.21%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 46 loss = 2.441022857603067
+epoch 46 validation (≈2560 samples): 52.70%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 47 loss = 2.4129552584544265
+epoch 47 validation (≈2560 samples): 52.19%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 48 loss = 2.3892925416927526
+epoch 48 validation (≈2560 samples): 40.66%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 49 loss = 2.3685705197966924
+epoch 49 validation (≈2560 samples): 49.06%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 50 loss = 2.335739976964768
+epoch 50 validation (≈25250 samples): 54.72%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 51 loss = 2.3139032300187417
+epoch 51 validation (≈2560 samples): 45.55%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 52 loss = 2.2969976911009735
+epoch 52 validation (≈2560 samples): 45.27%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 53 loss = 2.2754372878877245
+epoch 53 validation (≈2560 samples): 50.59%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 54 loss = 2.2503695524549325
+epoch 54 validation (≈2560 samples): 47.85%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 55 loss = 2.233656226205354
+epoch 55 validation (≈2560 samples): 47.30%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 56 loss = 2.213165360195802
+epoch 56 validation (≈2560 samples): 56.76%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 57 loss = 2.193302143927848
+epoch 57 validation (≈2560 samples): 49.30%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 58 loss = 2.176289053164693
+epoch 58 validation (≈2560 samples): 57.46%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 59 loss = 2.163558397280501
+epoch 59 validation (≈2560 samples): 53.09%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 60 loss = 2.1389150346309047
+epoch 60 validation (≈25250 samples): 53.54%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 61 loss = 2.126418129508645
+epoch 61 validation (≈2560 samples): 60.70%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 62 loss = 2.1088052525410164
+epoch 62 validation (≈2560 samples): 59.77%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 63 loss = 2.0947023079938227
+epoch 63 validation (≈2560 samples): 62.03%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 64 loss = 2.0777220172567334
+epoch 64 validation (≈2560 samples): 57.34%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 65 loss = 2.057348556342298
+epoch 65 validation (≈2560 samples): 65.04%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 66 loss = 2.0472886005187587
+epoch 66 validation (≈2560 samples): 55.90%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 67 loss = 2.0303341881685917
+epoch 67 validation (≈2560 samples): 53.24%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 68 loss = 2.01763703879114
+epoch 68 validation (≈2560 samples): 53.71%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 69 loss = 2.0015634898069274
+epoch 69 validation (≈2560 samples): 57.54%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 70 loss = 1.9825128016959717
+epoch 70 validation (≈25250 samples): 61.73%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 71 loss = 1.968456204266438
+epoch 71 validation (≈2560 samples): 59.84%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 72 loss = 1.9587485179869648
+epoch 72 validation (≈2560 samples): 60.66%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 73 loss = 1.9518996543947227
+epoch 73 validation (≈2560 samples): 61.45%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 74 loss = 1.9361997107641138
+epoch 74 validation (≈2560 samples): 56.33%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 75 loss = 1.9252212318067896
+epoch 75 validation (≈2560 samples): 61.37%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 76 loss = 1.9090760307563808
+epoch 76 validation (≈2560 samples): 62.70%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 77 loss = 1.8969727186700298
+epoch 77 validation (≈2560 samples): 58.20%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 78 loss = 1.8872580408278865
+epoch 78 validation (≈2560 samples): 65.70%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 79 loss = 1.8718911757327543
+epoch 79 validation (≈2560 samples): 62.93%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 80 loss = 1.861646628395559
+epoch 80 validation (≈25250 samples): 60.96%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 81 loss = 1.8530008222970238
+epoch 81 validation (≈2560 samples): 62.66%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 82 loss = 1.8380526800187114
+epoch 82 validation (≈2560 samples): 63.83%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 83 loss = 1.8284535740830323
+epoch 83 validation (≈2560 samples): 64.69%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 84 loss = 1.825533815239129
+epoch 84 validation (≈2560 samples): 62.38%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 85 loss = 1.8088567083220277
+epoch 85 validation (≈2560 samples): 60.66%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 86 loss = 1.7991560984444697
+epoch 86 validation (≈2560 samples): 57.81%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 87 loss = 1.7927513819842449
+epoch 87 validation (≈2560 samples): 59.84%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 88 loss = 1.7798196354856586
+epoch 88 validation (≈2560 samples): 61.09%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 89 loss = 1.7665266995571627
+epoch 89 validation (≈2560 samples): 61.41%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 90 loss = 1.7629723752497053
+epoch 90 validation (≈25250 samples): 68.21%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 91 loss = 1.7489471417417621
+epoch 91 validation (≈2560 samples): 62.85%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 92 loss = 1.7441265524653318
+epoch 92 validation (≈2560 samples): 65.39%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 93 loss = 1.7295579826934109
+epoch 93 validation (≈2560 samples): 64.92%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 94 loss = 1.7210094411491168
+epoch 94 validation (≈2560 samples): 66.88%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 95 loss = 1.7180055761148434
+epoch 95 validation (≈2560 samples): 58.87%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 96 loss = 1.7070486607189619
+epoch 96 validation (≈2560 samples): 63.48%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 97 loss = 1.6950994029281163
+epoch 97 validation (≈2560 samples): 68.67%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 98 loss = 1.6897885010407703
+epoch 98 validation (≈2560 samples): 61.25%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 99 loss = 1.6818888163928545
+epoch 99 validation (≈2560 samples): 65.39%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 100 loss = 1.669458283865019
+epoch 100 validation (≈25250 samples): 68.19%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 101 loss = 1.6628221308358826
+epoch 101 validation (≈2560 samples): 64.02%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 102 loss = 1.6561224498371085
+epoch 102 validation (≈2560 samples): 69.34%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 103 loss = 1.6492892063317126
+epoch 103 validation (≈2560 samples): 63.44%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 104 loss = 1.6402056723364902
+epoch 104 validation (≈2560 samples): 64.84%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 105 loss = 1.6347936747428213
+epoch 105 validation (≈2560 samples): 65.47%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 106 loss = 1.6262576393845058
+epoch 106 validation (≈2560 samples): 67.97%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 107 loss = 1.6189140982423285
+epoch 107 validation (≈2560 samples): 66.60%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 108 loss = 1.614779693899375
+epoch 108 validation (≈2560 samples): 70.08%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 109 loss = 1.60622272455889
+epoch 109 validation (≈2560 samples): 64.88%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 110 loss = 1.5991963228156465
+epoch 110 validation (≈25250 samples): 70.70%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 111 loss = 1.5912224005079112
+epoch 111 validation (≈2560 samples): 66.52%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 112 loss = 1.5861955442019422
+epoch 112 validation (≈2560 samples): 62.54%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 113 loss = 1.5817787215040855
+epoch 113 validation (≈2560 samples): 70.55%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 114 loss = 1.5727865269947368
+epoch 114 validation (≈2560 samples): 70.70%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 115 loss = 1.5683259315364826
+epoch 115 validation (≈2560 samples): 65.62%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 116 loss = 1.5628296147777696
+epoch 116 validation (≈2560 samples): 65.59%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 117 loss = 1.554052692362971
+epoch 117 validation (≈2560 samples): 69.45%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 118 loss = 1.5514571889871025
+epoch 118 validation (≈2560 samples): 69.38%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 119 loss = 1.5437401516319502
+epoch 119 validation (≈2560 samples): 66.68%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 120 loss = 1.5352161020209687
+epoch 120 validation (≈25250 samples): 69.44%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 121 loss = 1.5337855549173387
+epoch 121 validation (≈2560 samples): 64.53%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 122 loss = 1.5245168110183362
+epoch 122 validation (≈2560 samples): 65.47%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 123 loss = 1.5177363676379616
+epoch 123 validation (≈2560 samples): 63.95%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 124 loss = 1.5119190431034604
+epoch 124 validation (≈2560 samples): 59.02%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 125 loss = 1.5054775480704732
+epoch 125 validation (≈2560 samples): 62.54%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 126 loss = 1.506257494677805
+epoch 126 validation (≈2560 samples): 66.72%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 127 loss = 1.495521424800256
+epoch 127 validation (≈2560 samples): 69.49%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 128 loss = 1.487443841153639
+epoch 128 validation (≈2560 samples): 64.22%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 129 loss = 1.4892458553156838
+epoch 129 validation (≈2560 samples): 66.29%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 130 loss = 1.4815009671012953
+epoch 130 validation (≈25250 samples): 70.41%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 131 loss = 1.4775469296143786
+epoch 131 validation (≈2560 samples): 64.69%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 132 loss = 1.4747079882731926
+epoch 132 validation (≈2560 samples): 70.51%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 133 loss = 1.467323814077346
+epoch 133 validation (≈2560 samples): 69.41%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 134 loss = 1.461400033173388
+epoch 134 validation (≈2560 samples): 67.58%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 135 loss = 1.4552238249196472
+epoch 135 validation (≈2560 samples): 67.58%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 136 loss = 1.453034943684493
+epoch 136 validation (≈2560 samples): 68.48%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 137 loss = 1.4491932143504076
+epoch 137 validation (≈2560 samples): 70.47%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 138 loss = 1.4441656129604126
+epoch 138 validation (≈2560 samples): 67.85%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 139 loss = 1.4400317727583076
+epoch 139 validation (≈2560 samples): 66.68%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 140 loss = 1.4340823093452075
+epoch 140 validation (≈25250 samples): 70.56%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 141 loss = 1.4291916462989531
+epoch 141 validation (≈2560 samples): 67.03%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 142 loss = 1.4313322831396222
+epoch 142 validation (≈2560 samples): 64.22%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 143 loss = 1.421858462661013
+epoch 143 validation (≈2560 samples): 67.23%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 144 loss = 1.4166127538334812
+epoch 144 validation (≈2560 samples): 67.66%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 145 loss = 1.4110622744198287
+epoch 145 validation (≈2560 samples): 63.71%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 146 loss = 1.4063089421873438
+epoch 146 validation (≈2560 samples): 64.96%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 147 loss = 1.4063153221363283
+epoch 147 validation (≈2560 samples): 70.55%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 148 loss = 1.3990895213136578
+epoch 148 validation (≈2560 samples): 68.32%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 149 loss = 1.3926258579354869
+epoch 149 validation (≈2560 samples): 61.99%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 150 loss = 1.3952943344368005
+epoch 150 validation (≈25250 samples): 71.97%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 151 loss = 1.3894154831033336
+epoch 151 validation (≈2560 samples): 68.91%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 152 loss = 1.3851769072781301
+epoch 152 validation (≈2560 samples): 67.23%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 153 loss = 1.3800933315824755
+epoch 153 validation (≈2560 samples): 68.40%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 154 loss = 1.3768828355140812
+epoch 154 validation (≈2560 samples): 67.46%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 155 loss = 1.3718274418450032
+epoch 155 validation (≈2560 samples): 68.24%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 156 loss = 1.3704886526730982
+epoch 156 validation (≈2560 samples): 65.66%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 157 loss = 1.3629890680911123
+epoch 157 validation (≈2560 samples): 72.42%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 158 loss = 1.3585318217293265
+epoch 158 validation (≈2560 samples): 62.58%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 159 loss = 1.35494781448188
+epoch 159 validation (≈2560 samples): 70.16%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 160 loss = 1.3525123761778224
+epoch 160 validation (≈25250 samples): 71.09%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 161 loss = 1.3510137193950489
+epoch 161 validation (≈2560 samples): 66.80%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 162 loss = 1.3485041851383626
+epoch 162 validation (≈2560 samples): 72.34%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 163 loss = 1.3431536467272063
+epoch 163 validation (≈2560 samples): 66.37%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 164 loss = 1.3422296386001134
+epoch 164 validation (≈2560 samples): 65.98%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 165 loss = 1.3344404290643068
+epoch 165 validation (≈2560 samples): 66.68%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 166 loss = 1.3328754058655339
+epoch 166 validation (≈2560 samples): 63.75%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 167 loss = 1.3265146687321931
+epoch 167 validation (≈2560 samples): 67.73%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 168 loss = 1.3271975145056696
+epoch 168 validation (≈2560 samples): 71.76%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 169 loss = 1.3218367223047187
+epoch 169 validation (≈2560 samples): 66.64%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 170 loss = 1.3205601351394904
+epoch 170 validation (≈25250 samples): 66.51%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 171 loss = 1.3163425277640717
+epoch 171 validation (≈2560 samples): 65.86%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 172 loss = 1.3116087149062958
+epoch 172 validation (≈2560 samples): 70.51%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 173 loss = 1.3099899169493823
+epoch 173 validation (≈2560 samples): 71.21%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 174 loss = 1.3087762174826645
+epoch 174 validation (≈2560 samples): 74.57%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 175 loss = 1.3039252374353187
+epoch 175 validation (≈2560 samples): 66.21%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 176 loss = 1.3006530267570673
+epoch 176 validation (≈2560 samples): 67.93%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 177 loss = 1.2951619145893813
+epoch 177 validation (≈2560 samples): 70.20%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 178 loss = 1.2913358480088388
+epoch 178 validation (≈2560 samples): 64.53%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 179 loss = 1.2894028060113636
+epoch 179 validation (≈2560 samples): 69.49%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 180 loss = 1.2837587650853022
+epoch 180 validation (≈25250 samples): 71.43%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 181 loss = 1.2830548276743874
+epoch 181 validation (≈2560 samples): 69.18%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 182 loss = 1.2799351393255858
+epoch 182 validation (≈2560 samples): 65.39%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 183 loss = 1.276148781974717
+epoch 183 validation (≈2560 samples): 66.21%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 184 loss = 1.2731099109995876
+epoch 184 validation (≈2560 samples): 66.09%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 185 loss = 1.2688739094372237
+epoch 185 validation (≈2560 samples): 67.89%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 186 loss = 1.2676477359985754
+epoch 186 validation (≈2560 samples): 68.01%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 187 loss = 1.2656223927236627
+epoch 187 validation (≈2560 samples): 71.09%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 188 loss = 1.2587381928100838
+epoch 188 validation (≈2560 samples): 70.35%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 189 loss = 1.2568516193364714
+epoch 189 validation (≈2560 samples): 72.07%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 190 loss = 1.256510087488508
+epoch 190 validation (≈25250 samples): 70.16%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 191 loss = 1.251273605277436
+epoch 191 validation (≈2560 samples): 69.26%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 192 loss = 1.2458315874672565
+epoch 192 validation (≈2560 samples): 69.41%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 193 loss = 1.2444016995760474
+epoch 193 validation (≈2560 samples): 67.66%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 194 loss = 1.2415935550381247
+epoch 194 validation (≈2560 samples): 66.21%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 195 loss = 1.2382351117905217
+epoch 195 validation (≈2560 samples): 66.13%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 196 loss = 1.2366334796502645
+epoch 196 validation (≈2560 samples): 62.66%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 197 loss = 1.2340479296693707
+epoch 197 validation (≈2560 samples): 71.25%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 198 loss = 1.2303144778292565
+epoch 198 validation (≈2560 samples): 73.98%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 199 loss = 1.228368865308982
+epoch 199 validation (≈2560 samples): 72.30%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 200 loss = 1.2219562193080538
+epoch 200 validation (≈25250 samples): 68.04%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 201 loss = 1.2231066694637336
+epoch 201 validation (≈2560 samples): 72.38%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 202 loss = 1.2163556120812695
+epoch 202 validation (≈2560 samples): 71.56%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 203 loss = 1.2177066601731203
+epoch 203 validation (≈2560 samples): 63.71%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 204 loss = 1.2094419594944112
+epoch 204 validation (≈2560 samples): 66.21%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 205 loss = 1.2081646769778562
+epoch 205 validation (≈2560 samples): 69.34%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 206 loss = 1.2053337481155648
+epoch 206 validation (≈2560 samples): 71.17%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 207 loss = 1.203951011588471
+epoch 207 validation (≈2560 samples): 62.58%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 208 loss = 1.1962243206288554
+epoch 208 validation (≈2560 samples): 68.32%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 209 loss = 1.1983804039593184
+epoch 209 validation (≈2560 samples): 71.76%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 210 loss = 1.1969421905574231
+epoch 210 validation (≈25250 samples): 71.84%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 211 loss = 1.1904061156924408
+epoch 211 validation (≈2560 samples): 65.98%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 212 loss = 1.185789653734012
+epoch 212 validation (≈2560 samples): 67.15%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 213 loss = 1.1807855005358705
+epoch 213 validation (≈2560 samples): 74.45%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 214 loss = 1.182690676210737
+epoch 214 validation (≈2560 samples): 66.99%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 215 loss = 1.174871265304364
+epoch 215 validation (≈2560 samples): 66.95%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 216 loss = 1.1787310151644665
+epoch 216 validation (≈2560 samples): 68.36%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 217 loss = 1.1716268685029285
+epoch 217 validation (≈2560 samples): 68.24%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 218 loss = 1.1686916671538903
+epoch 218 validation (≈2560 samples): 70.20%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 219 loss = 1.166347212398013
+epoch 219 validation (≈2560 samples): 68.55%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 220 loss = 1.1626010688492174
+epoch 220 validation (≈25250 samples): 72.13%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 221 loss = 1.1581303706342239
+epoch 221 validation (≈2560 samples): 71.52%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 222 loss = 1.1577097222136192
+epoch 222 validation (≈2560 samples): 64.22%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 223 loss = 1.152475255941007
+epoch 223 validation (≈2560 samples): 69.73%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 224 loss = 1.148932436927317
+epoch 224 validation (≈2560 samples): 69.38%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 225 loss = 1.1458624676556477
+epoch 225 validation (≈2560 samples): 65.82%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 226 loss = 1.142480770155148
+epoch 226 validation (≈2560 samples): 71.48%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 227 loss = 1.1387851979284003
+epoch 227 validation (≈2560 samples): 69.18%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 228 loss = 1.1366687947326761
+epoch 228 validation (≈2560 samples): 71.88%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 229 loss = 1.1360663225878977
+epoch 229 validation (≈2560 samples): 68.75%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 230 loss = 1.1314931104804817
+epoch 230 validation (≈25250 samples): 73.69%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 231 loss = 1.12770416109318
+epoch 231 validation (≈2560 samples): 73.91%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 232 loss = 1.1217642358742137
+epoch 232 validation (≈2560 samples): 67.46%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 233 loss = 1.123289063123193
+epoch 233 validation (≈2560 samples): 69.65%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 234 loss = 1.1174187818313195
+epoch 234 validation (≈2560 samples): 70.47%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 235 loss = 1.1142411555519984
+epoch 235 validation (≈2560 samples): 72.27%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 236 loss = 1.1132134401837592
+epoch 236 validation (≈2560 samples): 71.41%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 237 loss = 1.1069521589782765
+epoch 237 validation (≈2560 samples): 67.85%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 238 loss = 1.103056591373859
+epoch 238 validation (≈2560 samples): 69.06%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 239 loss = 1.0990399454607822
+epoch 239 validation (≈2560 samples): 71.52%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 240 loss = 1.0959949252345775
+epoch 240 validation (≈25250 samples): 74.24%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 241 loss = 1.0958408274760734
+epoch 241 validation (≈2560 samples): 69.84%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 242 loss = 1.0941263318266412
+epoch 242 validation (≈2560 samples): 71.29%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 243 loss = 1.0889838744846507
+epoch 243 validation (≈2560 samples): 69.57%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 244 loss = 1.0852036843063808
+epoch 244 validation (≈2560 samples): 70.04%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 245 loss = 1.0797788625031022
+epoch 245 validation (≈2560 samples): 71.29%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 246 loss = 1.0775112783287224
+epoch 246 validation (≈2560 samples): 69.84%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 247 loss = 1.077198929050181
+epoch 247 validation (≈2560 samples): 71.05%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 248 loss = 1.0704319804415057
+epoch 248 validation (≈2560 samples): 70.35%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 249 loss = 1.070622530823887
+epoch 249 validation (≈2560 samples): 72.58%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 250 loss = 1.0639046697962795
+epoch 250 validation (≈25250 samples): 74.91%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 251 loss = 1.0638384515302803
+epoch 251 validation (≈2560 samples): 73.79%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 252 loss = 1.0590053576258542
+epoch 252 validation (≈2560 samples): 73.83%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 253 loss = 1.0554018606462887
+epoch 253 validation (≈2560 samples): 75.20%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 254 loss = 1.0514995566106866
+epoch 254 validation (≈2560 samples): 73.52%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 255 loss = 1.0497012083412398
+epoch 255 validation (≈2560 samples): 69.69%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 256 loss = 1.0470743428378215
+epoch 256 validation (≈2560 samples): 72.27%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 257 loss = 1.0431965570544253
+epoch 257 validation (≈2560 samples): 71.41%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 258 loss = 1.041263699043702
+epoch 258 validation (≈2560 samples): 74.88%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 259 loss = 1.0384025208973648
+epoch 259 validation (≈2560 samples): 75.39%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 260 loss = 1.0366061234458446
+epoch 260 validation (≈25250 samples): 75.82%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 261 loss = 1.0336352638521604
+epoch 261 validation (≈2560 samples): 73.32%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 262 loss = 1.030496438920301
+epoch 262 validation (≈2560 samples): 72.73%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 263 loss = 1.0278759718791093
+epoch 263 validation (≈2560 samples): 73.44%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 264 loss = 1.0226388132737414
+epoch 264 validation (≈2560 samples): 73.71%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 265 loss = 1.0210991974474968
+epoch 265 validation (≈2560 samples): 74.96%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 266 loss = 1.0184759658964553
+epoch 266 validation (≈2560 samples): 75.39%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 267 loss = 1.0152925621699973
+epoch 267 validation (≈2560 samples): 73.32%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 268 loss = 1.0128776289275772
+epoch 268 validation (≈2560 samples): 71.68%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 269 loss = 1.0089174291088243
+epoch 269 validation (≈2560 samples): 73.05%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 270 loss = 1.0106381522137733
+epoch 270 validation (≈25250 samples): 76.67%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 271 loss = 1.0071823460040705
+epoch 271 validation (≈2560 samples): 72.07%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 272 loss = 1.0048697875529626
+epoch 272 validation (≈2560 samples): 74.22%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 273 loss = 1.001108636632611
+epoch 273 validation (≈2560 samples): 73.83%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 274 loss = 0.9996691761221429
+epoch 274 validation (≈2560 samples): 72.81%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 275 loss = 0.998294893104251
+epoch 275 validation (≈2560 samples): 76.02%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 276 loss = 0.99418369432015
+epoch 276 validation (≈2560 samples): 75.00%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 277 loss = 0.9923528036300105
+epoch 277 validation (≈2560 samples): 75.16%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 278 loss = 0.9911635860783039
+epoch 278 validation (≈2560 samples): 73.83%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 279 loss = 0.988969032375726
+epoch 279 validation (≈2560 samples): 74.53%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 280 loss = 0.9865493298867355
+epoch 280 validation (≈25250 samples): 77.37%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 281 loss = 0.9876907079762751
+epoch 281 validation (≈2560 samples): 74.77%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 282 loss = 0.9841074099304652
+epoch 282 validation (≈2560 samples): 74.69%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 283 loss = 0.9831257192341014
+epoch 283 validation (≈2560 samples): 74.41%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 284 loss = 0.9814125635143948
+epoch 284 validation (≈2560 samples): 74.30%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 285 loss = 0.9817525136824882
+epoch 285 validation (≈2560 samples): 74.49%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 286 loss = 0.9788680898726183
+epoch 286 validation (≈2560 samples): 74.57%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 287 loss = 0.9784164071901403
+epoch 287 validation (≈2560 samples): 74.26%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 288 loss = 0.9775775451156565
+epoch 288 validation (≈2560 samples): 74.69%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 289 loss = 0.9772905232898473
+epoch 289 validation (≈2560 samples): 75.62%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 290 loss = 0.9764598452328849
+epoch 290 validation (≈25250 samples): 77.46%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 291 loss = 0.9752345798763111
+epoch 291 validation (≈2560 samples): 75.51%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 292 loss = 0.9752790999491222
+epoch 292 validation (≈2560 samples): 74.80%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 293 loss = 0.973888809932734
+epoch 293 validation (≈2560 samples): 74.41%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 294 loss = 0.972567514647745
+epoch 294 validation (≈2560 samples): 75.55%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 295 loss = 0.9717070516060681
+epoch 295 validation (≈2560 samples): 75.00%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 296 loss = 0.9735188046068248
+epoch 296 validation (≈2560 samples): 74.57%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 297 loss = 0.9724120249732493
+epoch 297 validation (≈2560 samples): 75.78%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 298 loss = 0.9716436271856327
+epoch 298 validation (≈2560 samples): 74.53%
+current learning rate: 
+total params: 677573, trainable params: 677573
+epoch 299 loss = 0.9713762209517728
+epoch 299 validation (≈2560 samples): 74.88%
+current learning rate: 

@@ -11,9 +11,8 @@ Designed for:
 
 ## Highlights
 
-
 - **GPU-ready**: mixed precision (AMP), OneCycleLR, gradient clipping
-- **Intended to fully utilize H100-class hardware**  
+- **Intended to fully utilize H100-class hardware** during training 
 - **Dataset abstraction**: single loader interface hides dataset quirks  
 - **Modular CLI training**: batching, learning rate, dataset, and activation type are all configurable  
 - **ResNet-inspired "MiniNet" included**: Six residual blocks - depthwise-separable convs. SE blocks between residual blocks.
@@ -61,6 +60,8 @@ Planned:
 ## MiniNet Summary
 
 ResNet-inspired shallow architecture.
+- 5x5 conv -> 3x3 conv using ReLU for initial feature extraction
+  - Hard coded ReLU in stem to introduce discontinuity. In deeper layers something that handles backprop better like mish is a better choice
 - 6 residual blocks (each with 2× depthwise-separable convs)
 - Skip connections w/ optional spatial downsampling
 - SE modules between blocks (squeeze ratio configurable)
@@ -68,29 +69,30 @@ ResNet-inspired shallow architecture.
 - Configurable activation: ReLU, SiLU, GELU
 
 ---
+## Some Results
+
+**75% accuracy on food101 @ 677k params** ain't half bad. Not going to declare victory until I sort out FLOPS/inference and get a better hyperparameter sweep. Check out "model-epoch299.pth" to verify, if you'd like. Please notify me if you spot an error in test methodology.
+
+  | Dataset  | Epochs | Initial LR | Activation | Batch | Train time   | Accuracy | Params  |
+  |----------|--------|------------|------------|-------|--------------|----------|---------|
+  | CIFAR10  |        |            |            |       |              |          |         |
+  | CIFAR100 |        |            |            |       |              |          |         |
+  | FOOD101  |  300   | 0.001      |  mish      |  512  | 10h on gh200 | ~75%     | 677,573 |
+
+---
 
 ## Training Details
 
 The code is intended to be easy to modify. Over-parameterizing adds unnecessary maintenance burden.
 
-| Feature         | Value                    |
+| Feature         | Value                   |
 |----------------|--------------------------|
-| Optimizer       | `AdamW`                 |
+| Optimizer       | `SGD`                   |
 | LR Schedule     | `OneCycleLR` (per batch)|
 | Loss Function   | `CrossEntropy` w/ label smoothing = 0.1 |
 | Mixed Precision | AMP enabled when using CUDA |
 | Gradient Clipping | `max_norm=1.0`        |
 | Normalization   | `mean=0.5`, `std=0.5` per channel |
-
----
-
-## Some Results
-
-  | Dataset  | Epochs | Initial LR | Activation | Batch | Train time | Accuracy |
-  |----------|--------|------------|------------|-------|------------|----------|
-  | CIFAR10  |        |            |            |       |            |          |  
-  | CIFAR100 |        |            |            |       |            |          |  
-  | FOOD101  |        |            |            |       |            |          |  
 
 ---
 ## Limitations
