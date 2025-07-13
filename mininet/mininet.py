@@ -126,19 +126,21 @@ class MiniNet(nn.Module):
         self.stem = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=5, stride=1, padding=2, bias=False),
             nn.BatchNorm2d(32),
-            nn.ReLU()
+            nn.ReLU(),
+
+            nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
         )
 
         self.seq = nn.Sequential(
-
-            MiniResBlock(3, 64, activation=nn.ReLU),
-            MiniResBlock(64, 64, activation=activation_fn),
+            MiniResBlock(32, 64, activation=activation_fn),
             SqueezeExcitation(64, squeeze(64)),
             MiniResBlock(64, 64, reduce=True, activation=activation_fn),
             SqueezeExcitation(64, squeeze(64)),
             MiniResBlock(64, 128, reduce=True, activation=activation_fn),
             SqueezeExcitation(128, squeeze(128)),
-            MiniResBlock(128, 256, activation=activation_fn),
+            MiniResBlock(128, 256, reduce=True, activation=activation_fn),
             SqueezeExcitation(256, squeeze(256)),
             MiniResBlock(256, 256, activation=activation_fn),
             SqueezeExcitation(256, squeeze(256)),
@@ -152,7 +154,7 @@ class MiniNet(nn.Module):
 
     #@torch.jit.export
     def forward_pass(self, fmap):
-        #fmap = self.stem(fmap)
+        fmap = self.stem(fmap)
         return self.seq(fmap)
 
     def forward(self, fmap):

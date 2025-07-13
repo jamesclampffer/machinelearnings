@@ -126,9 +126,11 @@ class ModelTrainer:
             self.optimizer,
             max_lr=initial_lr,
             total_steps=self.epochs * steps_per_epoch,
-            pct_start=0.1,
+            pct_start=0.3,
+            div_factor=20,
             anneal_strategy="cos",
             cycle_momentum=False,
+            final_div_factor=0.0001
         )
         self.checkpoint_path = checkpoint_path
         self.use_amp = self.device.startswith("cuda")
