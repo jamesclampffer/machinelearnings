@@ -139,6 +139,10 @@ class ModelTrainer:
 
     def _save_checkpoint(self, epoch):
         torch.save(self.model, "model-epoch{}.pth".format(epoch))
+        # quick check
+        total_params = sum(p.numel() for p in self.model.parameters())
+        trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        print("total params: {}, trainable params: {}".format(total_params, trainable_params))
 
     def train(self):
         per_batch_scheduler = isinstance(
@@ -188,6 +192,8 @@ class ModelTrainer:
                 self._validate(
                     0.1 if epoch % 10 != 0 else 1.0, "epoch {}".format(epoch)
                 )
+                print("current learning rate: ".format(self.optimizer.param_groups[0]['lr']))
+
         except KeyboardInterrupt:
             print("Training interrupted. Saving checkpoint...")
             self._save_checkpoint(epoch)

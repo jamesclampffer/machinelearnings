@@ -135,15 +135,15 @@ class MiniNet(nn.Module):
         )
 
         self.seq = nn.Sequential(
-            MiniResBlock(32, 64, reduce=False),
+            MiniResBlock(32, 64, reduce=False, activation=activation_fn),
             SqueezeExcitation(64, squeeze(64)),
-            MiniResBlock(64, 64, reduce=True, activation=activation_fn),
+            MiniResBlock(64, 64, reduce=False, activation=activation_fn),
             SqueezeExcitation(64, squeeze(64)),
             MiniResBlock(64, 128, reduce=True, activation=activation_fn),
             SqueezeExcitation(128, squeeze(128)),
             MiniResBlock(128, 256, reduce=True, activation=activation_fn),
             SqueezeExcitation(256, squeeze(256)),
-            MiniResBlock(256, 256, activation=activation_fn),
+            MiniResBlock(256, 256, reduce=True, activation=activation_fn),
             SqueezeExcitation(256, squeeze(256)),
             MiniResBlock(256, 256, activation=activation_fn),
             # Classifier
