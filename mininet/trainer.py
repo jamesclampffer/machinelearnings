@@ -10,7 +10,6 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import OneCycleLR
 from torch.utils.data import DataLoader
-from torch.utils.data.distributed import DistributedSampler
 import torchvision.transforms as transforms
 
 
@@ -102,18 +101,21 @@ class ModelTrainer:
         self.loss_fn = loss_fn
         self.epochs = epochs
         self.batch_size = batch_size
-        self.optimizer = optimizer_cls(self.model.parameters(), lr=initial_lr)
+        self.optimizer = torch.optim.SGD(model.parameters(), lr=initial_lr, momentum=0.9, weight_decay=1e-4)
         steps_per_epoch = len(self.dataloader)
-        self.scheduler = OneCycleLR(
+
+        self.scheduler = torch.optim.lr_scheduler.OneCycleLR(
             self.optimizer,
-            max_lr=initial_lr,
-            total_steps=self.epochs * steps_per_epoch,
-            pct_start=0.3,
-            div_factor=20,
-            anneal_strategy="cos",
-            cycle_momentum=False,
-            final_div_factor=10e4
+            max_lr=1e-1,
+            total_steps=epochs * steps_per_epoch,
+            pct_start=0.3,  # LR rise portion
+            cycle_momentum=True,
+            base_momentum=0.85,
+            max_momentum=0.95,
+            div_factor=25,
+            final_div_factor=1e4
         )
+
         self.checkpoint_path = checkpoint_path
         self.use_amp = self.device.startswith("cuda")
         self.scaler = GradScaler(enabled=self.use_amp)
@@ -130,7 +132,7 @@ class ModelTrainer:
         per_batch_scheduler = isinstance(
             self.scheduler,
             torch.optim.lr_scheduler._LRScheduler,
-        ) or isinstance(self.scheduler, OneCycleLR)
+        ) or isinstance(self.scheduler, OneCycleLR) or isinstance(self.scheduler, torch.optim.SGD)
 
         try:
             for epoch in range(self.start_epoch, self.epochs):
