@@ -35,3 +35,7 @@ LLMs are a uniquely marketable piece of advanced R&D. And I need to inform mysel
 ~~A set of chatbots~~ A distributed team of cutting-edge models powering agentic AIs to walk through a silly, yet surprisingly insightful, simulation of "Twelve Angry Men". This project is a hands-on dive into the practicalities of working with LLMs.
 
 It's a direct experiment designed to see how fast I could get something running with no prior knowledge of tooling (a few days) that provides a window to observe these models. Also, it's a tongue-in-cheek exploration of "Prompt Engineering"(TM).
+
+### [Federated Similarity Search](inverted_similarity_index/README.md)
+
+An initial dive into building an on-premise semantic similarity search engine. Leveraging text embeddings and Approximate Nearest Neighbor (ANN) indexing, it aims to quickly find documents by their meaning rather than exact keywords. While serving as a learning vehicle, it explores potential end uses such as localized RAG (Retrieval Augmented Generation) for LLMs and robust document search, laying groundwork for these applications. The focus is significantly on practical, platform-level concerns: infrastructure control, scalability, and federated search across multiple data shards, rather than relying on external hosted services.

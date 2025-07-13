@@ -8,7 +8,7 @@ This system performs similarity searches using text embeddings—high-dimensiona
  ### Why make this?
 Quickly find documents by meaning, not exact keywords. Unlike generative LLMs, results remain traceable to original documents. Future plans include OCR integration for scanned documents.
 
-Unlike hosted services, this project emphasizes local/bybrid deployment and infrastructure control.
+Unlike hosted services, this project emphasizes local/hybrid deployment and infrastructure control.
 
 ## Quickstart
 
@@ -67,7 +67,8 @@ Longer term
 - Background process will handle merging shards and purging deleted embeddings
 
 ### Federated Search (`FederatedIndexSearch`)
-- Runs top-K across all shards with oversampling (overscan factor)
+- Runs top-K across all shards with oversampling (the overscan factor)
+  - Overscan factor: ratio of extra items to return from the local top-K from each shard.
 - Re-ranks globally using an ephemeral Annoy index built from per-shard candidates
 
 ### Token Source
