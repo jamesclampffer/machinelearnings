@@ -1,14 +1,23 @@
-# James Clampffer 2025
+# Copyright James Clampffer - 2025
 """Download and preprocess text into chunks for embedding generation."""
 
 # You'll see the term "chunk" used as a quantity of text. This is to avoid
 # getting hung up on a sentence, paragraph, list item, or whatever else might
 # be a useful unit of text.
 
+# TODO: look at langchain. might not need to reinvent wheels.
+
+import logging
 import requests
 import io
 import typing
-import uuid
+import local_document_cache
+
+ingress_logger = logging.getLogger("data_ingress")
+system_logger = logging.getLogger("platform")
+
+ing_logger = lambda s: ingress_logger.info(s)
+sys_logger = lambda s: system_logger.info(s)
 
 # Forcing myself to use full module paths most of the time to burn them
 # into memory. There's a limit to how many times I'm willing to retype
@@ -23,30 +32,42 @@ class GutenbergTextReader:
     provides an iterator that chunks by ~paragraph.
     """
 
-    __slots__ = ("url", "_text_content")
+    __slots__ = ("_url", "_text_content", "_cache")
+    _url: str
+    _text_content: str
 
     def __init__(self, url: str):
-        self.url: str = url
+        self._url: str = url
         self._text_content: Optional[str] = None
-        self._fetch_text()
+        self._cache = local_document_cache.DocumentCache()
+
+        cdata = self._cache.try_lookup(url)
+        if type(cdata) == str and len(cdata) > 0:
+            ing_logger("Cache hit {}".format(url))
+            self._text_content = cdata
+        else:
+            self._fetch_text()
+            ing_logger("Cache miss {} - fetched".format(url))
+            self._cache.save_document(url, self._text_content)
 
     def _fetch_text(self) -> None:
         """
         Fetch the text content in one shot. Text files are pretty small.
         """
+
         try:
-            response = requests.get(self.url)
+            response = requests.get(self._url)
             response.raise_for_status()
 
             # Project Gutenberg text files are typically UTF-8 encoded
             response.encoding = response.apparent_encoding or "utf-8"
             self._text_content = response.text
 
-            print("Successfully fetched text from {}".format(self.url))
-            print("Text length: {} characters".format(len(self._text_content)))
+            ing_logger("Successfully fetched text from {}".format(self._url))
+            ing_logger("Text length: {} characters".format(len(self._text_content)))
 
         except requests.RequestException as e:
-            print(f"Error fetching text: {e}")
+            ing_logger(f"Error fetching text: {e}")
             raise
 
     def read_lines(self) -> Iterator[str]:
@@ -69,24 +90,29 @@ class GutenbergTextReader:
 
     def read_chunks(self) -> Iterator[str]:
         """
-        Return paragraphs-level chunks as strings. This is what the embeddings
-        will be built on. A flag to chunk on sentences would be nice.
+        Yields paragraph-level chunks as strings using double-newline splitting.
         """
-        data = io.StringIO(self._text_content)
+        bad_lines = [
+            "*      *      *      *      *",
+            "*      *      *      *      *      *",
+            "*      *      *      *      *      *      *",
+        ]
 
-        buf = []
-        for line in data:
-            val = line.strip()
-            if len(val) == 0:
-                if len(buf) > 0:
-                    joined = "".join(buf)
-                    # clear buffer
-                    buf = []
-                    yield joined
-                else:
-                    continue
-            else:
-                buf.append(line)
+        if self._text_content is None:
+            raise ValueError("Text not fetched yet. Call fetch_text() first.")
+        # Split on double newlines
+        paragraphs = [
+            p.strip() for p in self._text_content.split("\n\n\n") if len(p.strip()) > 0
+        ]
+        for para in paragraphs:
+            # Filter very short chunks, assume they are page headers
+            # Also filter lines that make it through but are known to
+            # be useless for the current data set.
+            if len(para.split()) < 5:  # Fewer than 5 words? Skip
+                continue
+            if para in bad_lines:
+                continue
+            yield para
 
     def get_stats(self) -> dict:
         """
@@ -113,27 +139,11 @@ def get_chosen_texts() -> list[str]:
     # Book sources:
     # A handful of topics, and extra depth/overlap in specific areas to
     # see what clusting looks like with real data.
-    #
-    # I expect something like math to produce a distinct set of clusters
-    # from short stories for example. The contents, voice(s) used in
-    # delivery, and delivery format are all different.
-    #
-    # Expected Clusters:
-    # - Transcendentalist stuff
-    #   - Emerson, Thoreau, Hawthorne etc
-    #
-    # - Children's literature, surreal fiction
-    #   - Alice's Adventures in Wonderland etc
-    #
-    # Other intended partial semantic overlap:
-    # - forestry info <- nature, sustainability-> transcendentalism
-    # - Shackleton's expedition <- individualism, expidition -> transcendentalism
-    # - The scarlet letter <- boston, timeframe -> Walden
+
     minitest = [
         "https://www.gutenberg.org/cache/epub/11/pg11.txt"
     ]  # Alice's Adventures in Wonderland
     fullsrc = [
-        "https://www.gutenberg.org/cache/epub/11/pg11.txt",  # Alice's Adventures in Wonderland
         "https://www.gutenberg.org/cache/epub/5200/pg5200.txt",  # The Metamorphosis, Kafka
         "https://www.gutenberg.org/cache/epub/7849/pg7849.txt",  # The Trial, Kafka
         "https://www.gutenberg.org/cache/epub/25344/pg25344.txt",  # The Scarlet Letter
@@ -145,7 +155,7 @@ def get_chosen_texts() -> list[str]:
         "https://www.gutenberg.org/cache/epub/48874/pg48874.txt",  # A brief history of forestry
         "https://www.gutenberg.org/cache/epub/5199/pg5199.txt",  # South, the Story of Shackleton's Last Expedition
     ]
-    return minitest
+    return minitest + fullsrc
 
 
 def main():
@@ -163,20 +173,13 @@ def main():
 
         # Display basic statistics
         stats = reader.get_stats()
-        print("\nText Statistics:")
+        ing_logger("\nText Statistics:")
         for key, value in stats.items():
-            print(f"  {key}: {value}")
-
-        for chunk in reader.read_chunks():
-            print("Chunk {}:{}".format(chunk_count, chunk))
-
-            chunk_count += 1
-            if chunk_count > 30:
-                break
+            ing_logger("{}: {}".format(key, value))
 
     chunk_count = 0
     for chunk in reader.read_chunks():
-        print("Chunk {}:{}".format(chunk_count, chunk))
+        sys_logger("Chunk {}:{}".format(chunk_count, chunk))
 
         chunk_count += 1
         if chunk_count > 30:
