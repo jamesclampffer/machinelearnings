@@ -1,19 +1,27 @@
 # James Clampffer 2025
 """
-Probe system for available resources. Allows heuristics to determine
-to allocate resources that utilize the whole machine without
-oversubscribing
+Probe system for available resources.
+- Basic heuristics to determine how best to allocate resources.
+- The Trainer assumes it can use the whole machine.
+  - Override $HARDWARE_THREADS to reduce resource consumption. That'll
+    indirectly reduce memory utilization.
 """
+# Install deps:
+#  $pip install psutil
+#
+# If using nvidia
+#  $pip install nvidia_smi nvidia-ml-py3
+
 
 import multiprocessing
 import os
 import torch
 
-# nvidia_smi and psutil imported in try-except below
+# import psutil and import nvidia_smi are imported in try/excepts below
 
 
 class ResourceMan:
-    """Best effort attempt to determine platform resources"""
+    """@brief Best effort attempt to determine platform resources"""
 
     __slots__ = (
         "_hw_threads",
@@ -36,6 +44,7 @@ class ResourceMan:
         )
         self._cuda_enabled = False
         if torch.cuda.is_available():
+            # If cuda isn't available don't attempt to import.
             import nvidia_smi
 
             self._cuda_enabled = True
@@ -49,18 +58,19 @@ class ResourceMan:
         try:
             import psutil
 
-            self._sys_mem_GiB = psutil.virtual_memory().total
+            self._sys_mem_GiB = int(psutil.virtual_memory().total / (1024.0**3))
         except ImportError:
             print("psutil not found: run 'pip install psutil'")
 
     def _probe_gpu_resources(self):
         """Snapshot attached gpu hardware. amd not supported yet"""
         if self._cuda_enabled:
-            # Take a peak at available VRAM. Needs nvidia_smi lib
+            # Take a peek at available VRAM. Needs nvidia_smi lib
             handle = None
             try:
-                # If multicard, assume all are the same. Also assume no HW
-                # contention from other procs.
+                # If multicard, assume all are the same. This is a
+                # reasonable assumption here. Also assume no HW
+                # contention from other workloads.
                 nvidia_smi.nvmlInit()
                 handle = nvidia_smi.nvmlDeviceGetHandleByIndex(0)
                 device_count: int = nvidia_smi.nvmlDeviceGetCount()
@@ -70,31 +80,37 @@ class ResourceMan:
                 # Give everything a chance to throw. Want all or no info to
                 # be available.
                 self._gpu_count = device_count
-                self._gpu_mem_GiB = meminfo.total / (1024**3)
+                self._gpu_mem_GiB = int(meminfo.total / (1024.0**3))
                 self._gpu_model = device_name
 
             except Exception:
-                if handle != None:
-                    nvidia_smi.nvmlShutdown()
+                print("failed to probe gpu")
+
+            if handle != None:
+                nvidia_smi.nvmlShutdown()
 
     @property
     def hw_threads(self):
-        """Logical threads. Hard to count real cores in some environments"""
+        """
+        @brief Logical threads.
+        @note Hard to count real cores in some VMs. Override
+              $HARDWARE_THREADS as needed.
+        """
         return self._hw_threads
 
     @property
     def sys_mem_GiB(self):
-        """RAM"""
+        """@brief RAM in GiB"""
         return self._sys_mem_GiB
 
     @property
     def gpu_count(self):
-        """Assume GPUs are the same. Reasonable here."""
+        """@brief GPU count"""
         return self._gpu_count
 
     @property
     def gpu_mem_GiB(self):
-        """VRAM"""
+        """@brief VRAM in GiB"""
         return self._gpu_mem_GiB
 
     @property
@@ -103,5 +119,9 @@ class ResourceMan:
 
     @property
     def cuda_enabled(self):
-        """CUDA drivers and libraries found"""
+        """@brief CUDA drivers and libraries found"""
         return self._cuda_enabled
+
+
+if __name__ == "__main__":
+    pass

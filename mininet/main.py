@@ -1,14 +1,16 @@
 # Jim Clampffer - 2025
 """
-Modularize the training pipeline for small classifier models.
+Modularize a training pipeline for small classifier models.
+
+Components can be used as standalone modules elsewhere.
 """
 
 import argparse
 import torch
-import torch.jit
 import torch.nn as nn
-import trainer
 
+import activations
+import trainer
 from dataloaders import MultiDatasetLoader
 from resourceman import ResourceMan
 from mininet import MiniNet
@@ -16,18 +18,16 @@ from mininet import MiniNet
 # Probe resources before calling torch
 platform_info = ResourceMan()
 
-# Use the whole machine. Safe to assume plenty of memory.
+# Use the whole machine. Safe to assume plenty of memory or at least
+# easy to patch for a specific platform.
 torch.set_num_threads(platform_info.hw_threads)
 torch.set_num_interop_threads(platform_info.hw_threads // 2)
 
 
-def get_cli_args(parser: argparse.ArgumentParser):
+def add_cli_basic_args(parser: argparse.ArgumentParser):
     """Just to keep __main__ short enough to fit in a terminal"""
     # I don't usually care about format - but when I do, it's something
     # like this. The pattern makes missing stuff stand out a bit.
-    # "You need to format this the way I want because otherwise it's
-    # unclear" -> "tell me you're inexperienced, without telling me
-    # you're inexperienced"
     # fmt: off
     parser.add_argument(
         "--epochs",
@@ -40,7 +40,7 @@ def get_cli_args(parser: argparse.ArgumentParser):
         "--model",
         type=str,
         default="mininet",
-        choices=["mininet","resnet18"],
+        choices=["mininet"],
         help="modify the code in main.py if your model of choice isn't available",
     )
 
@@ -76,7 +76,7 @@ def get_cli_args(parser: argparse.ArgumentParser):
             "silu", "swish",
             "gelu",
             "mish",
-            #"serf"
+            "serf",
         ],
         help="activation function - applies to whole model for now",
     )
@@ -94,10 +94,18 @@ def get_cli_args(parser: argparse.ArgumentParser):
         default="",
         help="Load a model to resume training. Optimizer and scheduler will be reset.",
     )
-    # fmt: on
-    return parser.parse_args()
 
-def resolve_activation_name(name: str) -> nn.Module:
+    parser.add_argument(
+        "--loss_label_smoothing",
+        type=float,
+        default=0.1,
+        help="Loss function label smoothing"
+    )
+    # fmt: on
+    return parser
+
+
+def resolve_activation_name(name: str) -> type[nn.Module]:
     activation_map = {
         "relu": nn.ReLU,
         # relu bounded 0..6
@@ -111,15 +119,20 @@ def resolve_activation_name(name: str) -> nn.Module:
         "gelu": nn.GELU,
         # smooth, self regulating, good gradient flow
         "mish": nn.Mish,
-        # todo: SERF
+        # new and fancy
+        "serf": activations.SERF,
     }
     return activation_map[name.lower()]
 
 
 if __name__ == "__main__":
-    compute_element = "cuda" if platform_info.cuda_enabled else "cpu"
     cli_arg_parser = argparse.ArgumentParser("Train a model")
-    args = get_cli_args(cli_arg_parser)
+
+    # Basic training args, add more structure later
+    cli_arg_parser = add_cli_basic_args(cli_arg_parser)
+    # OneCycleLR specific
+    cli_arg_parser = trainer.add_scheduler_args(cli_arg_parser)
+    args = cli_arg_parser.parse_args()
 
     setname = args.dataset.lower()
 
@@ -133,27 +146,25 @@ if __name__ == "__main__":
 
     model = None
     if args.modelpath != "":
-        model = torch.load(args.modelpath)
+        model = MiniNet.from_file(args.modelpath, resolve_activation_name)
     else:
         model = MiniNet(
             dataset.num_classes,
-            dataset.img_channels,
             resolve_activation_name(args.activation),
-            squeeze_factor=args.squeeze_factor
+            squeeze_factor=args.squeeze_factor,
         )
 
-    # todo: make configurable
-    loss_fn = nn.CrossEntropyLoss(label_smoothing=0.1)
+    loss_fn = nn.CrossEntropyLoss(label_smoothing=args.loss_label_smoothing)
 
     trainer_job = trainer.ModelTrainer(
         model=model,
         loss_fn=loss_fn,
         dataset=dataset,
         epochs=args.epochs,
+        cliargs=args,  # fixme: this in addition to params is gross.
         platform_info=platform_info,
         initial_lr=args.initial_lr,
         batch_size=args.batch_size,
-        optimizer_cls=torch.optim.AdamW,
     )
 
     # Start training, trainer handles saving the trained model.

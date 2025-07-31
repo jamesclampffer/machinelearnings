@@ -1,22 +1,23 @@
 
 # CNN Training Toolkit
 
-Minimalist framework for training CNNs on image classification tasks. Originally built for self-teaching experiments that needed fast iteration on public datasets like CIFAR and Food101.
+Minimalist framework for training CNNs on image classification tasks. 
+
+Originally built for self-teaching experiments requiring fast iteration on public datasets like CIFAR and Food-101. Currently being tested for training specialized subclass heads downstream of an object detector model.
 
 Designed for:
 - Quick end-to-end experimentation with reasonable defaults
-- Hackable by design — an example architecture is prewired; others can be dropped in with minimal changes.
+- Hackable by design — an example architecture is prewired; others can be dropped in with minimal glue.
 
 ---
 
 ## Highlights
 
-- **GPU-ready**: mixed precision (AMP), OneCycleLR, gradient clipping
-- **Intended to fully utilize H100-class hardware** during training 
-- **Dataset abstraction**: single loader interface hides dataset quirks  
-- **Modular CLI training**: batching, learning rate, dataset, and activation type are all configurable  
-- **ResNet-inspired "MiniNet" included**: Six residual blocks - depthwise-separable convs. SE blocks between residual blocks.
-- **Portable**: no pip install or packaging overhead—just copy and run
+- **GPU-ready**: mixed precision (AMP), OneCycleLR, gradient clipping.
+- **Intended to fully utilize H100-class hardware** during training, needs some tuning to run on accelerators with limited memory.
+- **Dataset abstraction**: single loader interface hides dataset quirks.  
+- **Modular CLI training**: batching, learning rate, dataset, and activation etc. are configurable.
+- **ResNet-inspired "MiniNet" included**: Six residual blocks — depthwise-separable convs, with SE blocks in between.
 
 ---
 
@@ -53,25 +54,25 @@ python main.py \
 | Food-101  | 224×224×3   | 101       |
 
 Planned:  
-- HuggingFace and Kaggle-hosted datasets with download logic
+- HuggingFace and Kaggle-hosted datasets with download logic.
 
 ---
 
 ## MiniNet Summary
 
 ResNet-inspired shallow architecture.
-- 5x5 conv -> 3x3 conv using ReLU for initial feature extraction
-  - Hard coded ReLU in stem to introduce discontinuity. In deeper layers something that handles backprop better like mish is a better choice
-- 6 residual blocks (each with 2× depthwise-separable convs)
-- Skip connections w/ optional spatial downsampling
-- SE modules between blocks (squeeze ratio configurable)
-- AdaptiveAvgPool → Linear classification head
-- Configurable activation: ReLU, SiLU, GELU
+- 5x5 conv -> 3x3 conv using ReLU for initial feature extraction.
+  - "Hard-coded ReLU in the stem to introduce discontinuity. Deeper layers benefit from activations with better gradient flow, like Mish."
+- 6 residual blocks (each with 2× depthwise-separable convs).
+- Skip connections w/ optional spatial downsampling.
+- SE modules between blocks (squeeze ratio configurable).
+- AdaptiveAvgPool → Linear classification head.
+- Configurable activation: ReLU, ReLU6, SiLU, GELU, SERF, mish.
 
 ---
 ## Some Results
 
-**75% accuracy on food101 @ 677k params** ain't half bad. Not going to declare victory until I sort out FLOPS/inference and get a better hyperparameter sweep. Check out "model-epoch299.pth" to verify, if you'd like. Please notify me if you spot an error in test methodology.
+**75% accuracy on food101 @ 677k params** ain't half bad. Not going to declare victory until I sort out FLOPS/inference and get a better hyperparameter sweep. Check out "model-epoch299.pth" to verify, if you'd like. Please notify me if you spot an error in test methodology. I got 82% in a 400 epoch training run but a dog ate my weights.
 
   | Dataset  | Epochs | Initial LR | Activation | Batch | Train time   | Accuracy | Params  |
   |----------|--------|------------|------------|-------|--------------|----------|---------|
@@ -89,22 +90,24 @@ The code is intended to be easy to modify. Over-parameterizing adds unnecessary 
 |----------------|--------------------------|
 | Optimizer       | `SGD`                   |
 | LR Schedule     | `OneCycleLR` (per batch)|
-| Loss Function   | `CrossEntropy` w/ label smoothing = 0.1 |
+| Loss Function   | `CrossEntropy` w/ label smoothing (0.1) |
 | Mixed Precision | AMP enabled when using CUDA |
 | Gradient Clipping | `max_norm=1.0`        |
 | Normalization   | `mean=0.5`, `std=0.5` per channel |
 
 ---
 ## Limitations
+Model save logic needs work
+- serializes entire object. Code must be exactly the same in source.
 
-- Checkpointing logic saves model only; other state is not restored.
-- DDP path was copied from an older project without testing. More there as a motivator to address multi-gpu.
+No DDP yet.
 ---
 
 ## Roadmap
 
-- Support more datasets selectable by CLI flags
 - Add hyperparameter sweep utility  
 - Multi-GPU support (initial DDP sketch copied from an older project)
-- Extend support to PINNs and other approximators (likely via a second training loop reusing existing CLI interface)
----
+- add more training loops + small example models
+  - object identification
+  - approximator/PINN
+  - image segmentation (a mini U-Net would be cool)
