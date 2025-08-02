@@ -16,6 +16,7 @@ Probe system for available resources.
 import multiprocessing
 import os
 import torch
+import nvidia_smi
 
 # import psutil and import nvidia_smi are imported in try/excepts below
 
@@ -83,11 +84,13 @@ class ResourceMan:
                 self._gpu_mem_GiB = int(meminfo.total / (1024.0**3))
                 self._gpu_model = device_name
 
-            except Exception:
+            except Exception as e:
+                print(str(e))
+                
                 print("failed to probe gpu")
 
-            if handle != None:
-                nvidia_smi.nvmlShutdown()
+                if handle != None:
+                    nvidia_smi.nvmlShutdown()
 
     @property
     def hw_threads(self):

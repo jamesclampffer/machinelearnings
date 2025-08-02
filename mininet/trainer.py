@@ -5,6 +5,7 @@ Modularized training utilities as well as training loop.
 
 import argparse
 import itertools
+import json
 import time
 import torch
 from torch.cuda.amp import autocast, GradScaler
@@ -217,7 +218,7 @@ class ModelTrainer:
 
                 # avoid cost of full validation every epoch
                 acc = self._validate(
-                    0.5 if epoch % 5 != 0 else 1.0, "epoch {}".format(epoch)
+                    1.0, "epoch {}".format(epoch)
                 )
                 if acc > best_acc:
                     # todo: on shortcut validations run a full validation prior to
@@ -225,6 +226,15 @@ class ModelTrainer:
                     best_acc = acc
                     self._save_checkpoint(epoch, self.optimizer, self.scheduler)
 
+                epoch_data = {
+                    "model_arch": self.model.arch_name,
+                    "epoch":epoch,
+                    "lr":self.optimizer.param_groups[0]["lr"],
+                    "acc":acc,
+                }
+                json.dump(epoch_data, open("epoch-{}.json".format(epoch), "w"))
+
+                
                 normalized_loss = total_loss / len(self.dataloader.dataset)
                 print("epoch {} loss = {}".format(epoch, normalized_loss))
 

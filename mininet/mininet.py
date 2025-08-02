@@ -89,7 +89,7 @@ class MiniNet(nn.Module):
             MiniResBlock(256, 256, reduce=True, activation=activation_fn),
             SqueezeExcitation(256, squeeze(256), activation=activation_fn),
             MiniResBlock(256, 256, activation=activation_fn),
-            SqueezeExcitation(256, squeeze(256), activation=activation_fn),
+            MiniResBlock(256, 256, activation=activation_fn),
         )
 
         # Simple Pool->FC
