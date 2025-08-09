@@ -12,7 +12,7 @@ import torchvision
 import torchvision.transforms
 import torchvision.datasets
 from torch.utils.data import DataLoader
-from typing import Any
+from typing import Any, Optional
 
 
 class MultiDatasetLoader:
@@ -152,31 +152,36 @@ class MultiDatasetLoader:
         """@brief Get augmentation stack"""
         return self._augmentation_transform
 
-    def _make_loader(self, dataset) -> DataLoader:
+    def _make_loader(self, dataset, sampler: Optional[Any] = None) -> DataLoader:
+        use_shuffle = sampler is None
         return DataLoader(
             dataset,
             batch_size=self.batch_size,
-            shuffle=True,
+            shuffle=use_shuffle,
+            sampler=sampler,
             prefetch_factor=64,
             pin_memory=True,
             persistent_workers=True,
             num_workers=self._resource_man.hw_threads // 4 + 1,
         )
 
-    def get_train_loader(self) -> DataLoader:
-        """@brief DataLoader for training set"""
-        if self._training_loader != None:
+    def get_train_loader(self, sampler: Optional[Any] = None) -> DataLoader:
+        # Avoid caching when a sampler is provided to keep epoch reshuffle simple.
+        if sampler is not None:
+            return self._make_loader(self._training_set, sampler=sampler)
+        if self._training_loader is not None:
             return self._training_loader
-
-        self._training_loader = self._make_loader(self._training_set)
+        self._training_loader = self._make_loader(self._training_set, sampler=None)
         return self._training_loader
 
-    def get_val_loader(self) -> DataLoader:
-        """@brief DataLoader for validation set"""
-        if self._validation_loader != None:
+    def get_val_loader(self, sampler: Optional[Any] = None) -> DataLoader:
+        # In DDP, either use a DistributedSampler (distributed validation)
+        # or build a plain loader on rank0 (rank0-only validation).
+        if sampler is not None:
+            return self._make_loader(self._validation_set, sampler=sampler)
+        if self._validation_loader is not None:
             return self._validation_loader
-
-        self._validation_loader = self._make_loader(self._validation_set)
+        self._validation_loader = self._make_loader(self._validation_set, sampler=None)
         return self._validation_loader
 
     def __iter__(self):

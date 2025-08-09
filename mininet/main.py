@@ -6,6 +6,7 @@ Components can be used as standalone modules elsewhere.
 """
 
 import argparse
+import os
 import torch
 import torch.nn as nn
 
@@ -130,9 +131,14 @@ if __name__ == "__main__":
 
     # Basic training args, add more structure later
     cli_arg_parser = add_cli_basic_args(cli_arg_parser)
+
     # OneCycleLR specific
     cli_arg_parser = trainer.add_scheduler_args(cli_arg_parser)
     args = cli_arg_parser.parse_args()
+
+    # Optional: emit brief hint if multiple GPUs present and not using torchrun.
+    if platform_info.cuda_enabled and torch.cuda.device_count() > 1 and os.environ.get("WORLD_SIZE", "1") == "1":
+        print("Hint: multi-GPU available. Launch with: torchrun --standalone --nproc_per_node={} main.py [args]".format(torch.cuda.device_count()))
 
     setname = args.dataset.lower()
 
